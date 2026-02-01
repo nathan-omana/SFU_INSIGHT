@@ -9,6 +9,7 @@ import { SignedIn, SignedOut, SignInButton, UserButton, useUser, useClerk } from
 import { getDepartments, getCourses, startProfessorAggregation } from './api/sfuScheduleApi';
 import Scheduler from './components/Scheduler';
 import CourseSuccessGuide from './components/CourseSuccessGuide';
+import SavedCourses from './components/SavedCourses';
 
 
 // --- MOCK DATA ---
@@ -157,7 +158,31 @@ function App() {
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState('All'); // All, Courses, Professors
     const [selectedItem, setSelectedItem] = useState(null); // For modal
-    const [savedCourses, setSavedCourses] = useState(new Set(['c1']));
+    const [savedCourses, setSavedCourses] = useState(() => {
+        // Load from localStorage on initial mount
+        const stored = localStorage.getItem('sfu_insight_saved_courses');
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return [];
+            }
+        }
+        return [];
+    });
+    const [savedCoursesData, setSavedCoursesData] = useState(() => {
+        // Load full course data from localStorage
+        const stored = localStorage.getItem('sfu_insight_saved_courses_data');
+        if (stored) {
+            try {
+                return JSON.parse(stored) || {};
+            } catch (e) {
+                return {};
+            }
+        }
+        return {};
+    });
     const [showContributionForm, setShowContributionForm] = useState(false);
     const [resourceVotes, setResourceVotes] = useState({});
     const [majors, setMajors] = useState([]);
@@ -178,7 +203,7 @@ function App() {
     const [loadingMajors, setLoadingMajors] = useState(false);
     const [majorCourses, setMajorCourses] = useState([]);
     const [loadingCourses, setLoadingCourses] = useState(false);
-    const [currentView, setCurrentView] = useState('home'); // 'home' or 'scheduler'
+    const [currentView, setCurrentView] = useState('home'); // 'home', 'scheduler', 'success-guide', 'saved'
     const [searchResults, setSearchResults] = useState([]); // Kept for flat list compatibility if needed
     const [groupedResults, setGroupedResults] = useState([]); // New grouped structure
     const [searchLoading, setSearchLoading] = useState(false);
@@ -612,12 +637,29 @@ function App() {
         return searchResults;
     }, [searchResults, activeTab]);
 
-    const toggleSave = (e, id) => {
+    const toggleSave = (e, courseId, courseData) => {
         e.stopPropagation();
-        const next = new Set(savedCourses);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        setSavedCourses(next);
+        const isSaved = savedCourses.includes(courseId);
+        if (isSaved) {
+            // Remove
+            const nextIds = savedCourses.filter(id => id !== courseId);
+            setSavedCourses(nextIds);
+            localStorage.setItem('sfu_insight_saved_courses', JSON.stringify(nextIds));
+            // Remove from data
+            const nextData = { ...savedCoursesData };
+            delete nextData[courseId];
+            setSavedCoursesData(nextData);
+            localStorage.setItem('sfu_insight_saved_courses_data', JSON.stringify(nextData));
+        } else {
+            // Add
+            const nextIds = [...savedCourses, courseId];
+            setSavedCourses(nextIds);
+            localStorage.setItem('sfu_insight_saved_courses', JSON.stringify(nextIds));
+            // Add to data
+            const nextData = { ...savedCoursesData, [courseId]: courseData };
+            setSavedCoursesData(nextData);
+            localStorage.setItem('sfu_insight_saved_courses_data', JSON.stringify(nextData));
+        }
     };
 
     const handleCreateReview = async (e) => {
@@ -692,9 +734,9 @@ function App() {
                             <BarChart2 size={22} />
                             <span>Schedule</span>
                         </a>
-                        <a href="#" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.125rem', fontWeight: '600', color: 'white', padding: '0.75rem 1.25rem', borderRadius: '8px', transition: 'all 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                        <a href="#" onClick={(e) => { e.preventDefault(); setCurrentView('saved'); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.125rem', fontWeight: '600', color: 'white', padding: '0.75rem 1.25rem', borderRadius: '8px', transition: 'all 0.2s', backgroundColor: currentView === 'saved' ? 'rgba(255,255,255,0.2)' : 'transparent' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = currentView === 'saved' ? 'rgba(255,255,255,0.2)' : 'transparent'}>
                             <Bookmark size={22} />
-                            <span>Explore</span>
+                            <span>Saved</span>
                         </a>
 
                         <SignedOut>
@@ -726,6 +768,23 @@ function App() {
                 <CourseSuccessGuide
                     course={selectedItem}
                     onBack={() => setCurrentView('home')}
+                />
+            )}
+
+            {/* Saved Courses View */}
+            {currentView === 'saved' && (
+                <SavedCourses
+                    savedCourses={savedCourses.map(id => savedCoursesData[id]).filter(Boolean)}
+                    onBack={() => setCurrentView('home')}
+                    onSelectCourse={(course) => { setSelectedItem(course); setCurrentView('home'); }}
+                    onRemoveCourse={(id) => {
+                        setSavedCourses(prev => prev.filter(cid => cid !== id));
+                        setSavedCoursesData(prev => {
+                            const next = { ...prev };
+                            delete next[id];
+                            return next;
+                        });
+                    }}
                 />
             )}
 
@@ -1050,8 +1109,8 @@ function App() {
                                             <CourseCard
                                                 key={item.data.id}
                                                 course={item.data}
-                                                saved={savedCourses.has(item.data.id)}
-                                                onToggleSave={(e) => toggleSave(e, item.data.id)}
+                                                saved={savedCourses.includes(item.data.id)}
+                                                onToggleSave={(e) => toggleSave(e, item.data.id, item.data)}
                                                 onClick={() => setSelectedItem(item.data)}
                                             />
                                         ) : (
@@ -1371,19 +1430,14 @@ function App() {
                                         <div className="p-4 md:p-6 bg-gray-50 border-b border-gray-100">
                                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                 <button
-                                                    onClick={() => {
-                                                        const next = new Set(savedCourses);
-                                                        if (next.has(selectedItem.id)) next.delete(selectedItem.id);
-                                                        else next.add(selectedItem.id);
-                                                        setSavedCourses(next);
-                                                    }}
-                                                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-200 ${savedCourses.has(selectedItem.id)
+                                                    onClick={(e) => toggleSave(e, selectedItem.id, selectedItem)}
+                                                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-200 ${savedCourses.includes(selectedItem.id)
                                                         ? 'bg-[#a6192e] text-white shadow-md hover:bg-[#8a1526]'
                                                         : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-[#a6192e] hover:bg-red-50 hover:text-[#a6192e] hover:shadow-lg'
                                                         }`}
                                                 >
-                                                    <Bookmark size={18} fill={savedCourses.has(selectedItem.id) ? 'currentColor' : 'none'} />
-                                                    {savedCourses.has(selectedItem.id) ? 'Saved ✓' : 'Save Course'}
+                                                    <Bookmark size={18} fill={savedCourses.includes(selectedItem.id) ? 'currentColor' : 'none'} />
+                                                    {savedCourses.includes(selectedItem.id) ? 'Saved ✓' : 'Save Course'}
                                                 </button>
 
                                                 <button
