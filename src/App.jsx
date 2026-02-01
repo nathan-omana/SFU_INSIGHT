@@ -113,7 +113,18 @@ function App() {
     const [showContributionForm, setShowContributionForm] = useState(false);
     const [resourceVotes, setResourceVotes] = useState({});
     const [majors, setMajors] = useState([]);
-    const [professors, setProfessors] = useState([]); // Store aggregated professors
+    const [professors, setProfessors] = useState([
+        // Seed with common profs for immediate search results
+        { id: 'prof-diana', name: 'Diana Cukierman', dept: 'CMPT', email: 'diana@sfu.ca' },
+        { id: 'prof-brian', name: 'Brian Fraser', dept: 'CMPT', email: 'bfraser@sfu.ca' },
+        { id: 'prof-anne', name: 'Anne Lavergne', dept: 'CMPT', email: 'alavergne@sfu.ca' },
+        { id: 'prof-jamie', name: 'Jamie Mulholland', dept: 'MATH', email: 'jmulholland@sfu.ca' },
+        { id: 'prof-veselin', name: 'Veselin Jungic', dept: 'MATH', email: 'vjungic@sfu.ca' },
+        { id: 'prof-sarah', name: 'Sarah Johnson', dept: 'PHYS', email: 'sjohnson@sfu.ca' },
+        { id: 'prof-andrew', name: 'Andrew Gemino', dept: 'BUS', email: 'agemino@sfu.ca' },
+        { id: 'prof-peter', name: 'Peter Tingling', dept: 'BUS', email: 'ptingling@sfu.ca' },
+        { id: 'prof-igor', name: 'Igor Shinkar', dept: 'CMPT', email: 'ishinkar@sfu.ca' }
+    ]); // Store aggregated professors
     const [selectedMajor, setSelectedMajor] = useState('');
     const [showMajorDropdown, setShowMajorDropdown] = useState(false);
     const [loadingMajors, setLoadingMajors] = useState(false);
@@ -349,12 +360,12 @@ function App() {
                     setGroupedResults([]);
                 }
 
-                // Combine results: Professors + Courses
-                setSearchResults([...matchingProfs, ...courseResults]);
+                // Combine results: Professors + Courses (Courses prioritized)
+                setSearchResults([...courseResults, ...matchingProfs]);
 
             } catch (error) {
                 console.error('Search failed:', error);
-                setSearchResults(matchingProfs); // At least show profs if course fetch fails
+                setSearchResults(matchingProfs); // AT LEAST show profs if course fetch fails
                 setGroupedResults([]);
             } finally {
                 setSearchLoading(false);
@@ -514,8 +525,8 @@ function App() {
                                     autoFocus
                                 />
 
-                                {/* Autocomplete Dropdown - Grouped by Faculty */}
-                                {showSuggestions && (groupedResults.length > 0) && (
+                                {/* Autocomplete Dropdown - Courses & Professors */}
+                                {showSuggestions && (searchResults.length > 0) && (
                                     <div style={{
                                         position: 'absolute',
                                         top: '100%',
@@ -530,9 +541,9 @@ function App() {
                                         maxHeight: '400px',
                                         zIndex: 100
                                     }}>
+                                        {/* 1. Course Results (Grouped) */}
                                         {groupedResults.map((group) => (
                                             <div key={group.dept}>
-                                                {/* Faculty/Dept Header */}
                                                 <div style={{
                                                     padding: '0.75rem 1.25rem',
                                                     backgroundColor: '#f9fafb',
@@ -547,8 +558,6 @@ function App() {
                                                         {group.name} ({group.dept.toUpperCase()})
                                                     </span>
                                                 </div>
-
-                                                {/* Courses List */}
                                                 {group.courses.map((result) => (
                                                     <div
                                                         key={result.data.id}
@@ -556,6 +565,7 @@ function App() {
                                                             setSelectedItem(result.data);
                                                             setShowSuggestions(false);
                                                         }}
+                                                        className="search-result-item"
                                                         style={{
                                                             padding: '0.75rem 1.25rem',
                                                             cursor: 'pointer',
@@ -577,6 +587,59 @@ function App() {
                                                 ))}
                                             </div>
                                         ))}
+
+                                        {/* 2. Professor Results (Flat) */}
+                                        {searchResults.filter(r => r.type === 'prof').length > 0 && (
+                                            <div>
+                                                <div style={{
+                                                    padding: '0.75rem 1.25rem',
+                                                    backgroundColor: '#fef2f2', // Slightly redder for distinction
+                                                    borderBottom: '1px solid #fee2e2',
+                                                    borderTop: groupedResults.length > 0 ? '1px solid #e5e7eb' : 'none',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    position: 'sticky',
+                                                    top: 0
+                                                }}>
+                                                    <span style={{ fontWeight: '700', color: '#be123c', fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                        PROFESSORS
+                                                    </span>
+                                                </div>
+                                                {searchResults.filter(r => r.type === 'prof').map((result) => (
+                                                    <div
+                                                        key={result.data.id}
+                                                        onClick={() => {
+                                                            // For now, just select them or show an alert, or route to filtered view
+                                                            alert(`Selected Professor: ${result.data.name}`);
+                                                            setShowSuggestions(false);
+                                                        }}
+                                                        style={{
+                                                            padding: '0.75rem 1.25rem',
+                                                            cursor: 'pointer',
+                                                            borderBottom: '1px solid #f3f4f6',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '0.75rem'
+                                                        }}
+                                                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
+                                                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                                                    >
+                                                        <div style={{ background: '#e5e7eb', padding: '0.25rem', borderRadius: '50%' }}>
+                                                            <User size={16} color="#4b5563" />
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span style={{ fontWeight: '600', color: '#1f2937', fontSize: '0.9375rem' }}>
+                                                                {result.data.name}
+                                                            </span>
+                                                            <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                                                                {result.data.dept} Department
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -594,7 +657,12 @@ function App() {
                             </div>
 
                             {/* Major Selection */}
-                            <div style={{ marginTop: '2rem', position: 'relative' }}>
+                            <div style={{
+                                marginTop: '0.75rem',       /* Reduced from 2rem to move it up */
+                                position: 'relative',
+                                display: 'flex',            /* Added to enable centering */
+                                justifyContent: 'center'    /* Centers the button horizontally */
+                            }}>
                                 <button
                                     onClick={() => setShowMajorDropdown(!showMajorDropdown)}
                                     style={{
@@ -616,7 +684,7 @@ function App() {
                                 >
                                     <BookOpen size={20} />
                                     {selectedMajor ? selectedMajor.toUpperCase() : 'Select Your Major'}
-                                    <span style={{ marginLeft: '0.25rem', fontSize: '0.75rem' }}>{showMajorDropdown ? '▲' : '▼'}</span>
+                                    <span style={{ marginLeft: '0.1rem', fontSize: '0.75rem' }}>{showMajorDropdown ? '▲' : '▼'}</span>
                                 </button>
 
                                 {showMajorDropdown && (
