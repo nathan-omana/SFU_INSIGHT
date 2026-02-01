@@ -153,31 +153,32 @@ function App() {
         <div className="min-h-screen pb-20">
 
             {/* 1. Header */}
-            <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-gray-200">
-                <div className="w-full px-6 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setSearch(''); setSelectedItem(null); }}>
-                        <div className="bg-blue-600 text-white p-1.5 rounded-md">
-                            <Zap size={20} fill="currentColor" />
+            <header className="sticky top-0 z-40 bg-gradient-to-r from-red-700 via-red-600 to-red-700 border-b border-red-800 shadow-lg">
+                <div className="w-full px-8 h-24 flex items-center justify-between">
+                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => { setSearch(''); setSelectedItem(null); }}>
+                        <div className="bg-white/10 backdrop-blur-sm text-white p-2 rounded-lg border border-white/20">
+                            <BookOpen size={26} strokeWidth={2.5} />
                         </div>
-                        <span className="font-bold text-xl tracking-tight">SFU Insight</span>
+                        <span className="font-bold text-3xl tracking-tight text-white drop-shadow-lg">SFU Insight</span>
                     </div>
 
-                    <nav className="flex flex-row items-center gap-3">
-                        <button className="flex items-center gap-2 px-6 py-3 text-base font-semibold text-gray-700 bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-md transition-all duration-200 hover:shadow-md">
-                            <Search size={20} />
+                    <nav className="flex flex-row items-center gap-16">
+                        <a href="#" className="flex items-center gap-2.5 text-xl font-semibold text-white hover:text-white hover:scale-110 transition-all duration-200 hover:drop-shadow-lg">
+                            <Search size={24} />
                             <span>Search</span>
-                        </button>
-                        <button className="flex items-center gap-2.5 px-6 py-3 text-base font-semibold text-gray-700 bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-md transition-all duration-200 hover:shadow-md">
-                            <Bookmark size={20} />
+                        </a>
+                        <a href="#" className="flex items-center gap-2.5 text-xl font-semibold text-white hover:text-white hover:scale-110 transition-all duration-200 hover:drop-shadow-lg">
+                            <Bookmark size={24} />
                             <span>Explore</span>
-                        </button>
-                        <button className="flex items-center gap-2.5 px-6 py-3 text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-all duration-200 shadow-md hover:shadow-lg">
-                            <User size={20} />
+                        </a>
+                        <a href="#" className="flex items-center gap-2.5 text-xl font-semibold text-white hover:text-white hover:scale-110 transition-all duration-200 hover:drop-shadow-lg">
+                            <User size={24} />
                             <span>Login</span>
-                        </button>
+                        </a>
                     </nav>
                 </div>
             </header>
+
 
             {/* 2. Hero Search */}
             <section className="pt-20 pb-12 px-4 flex justify-center">
