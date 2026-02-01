@@ -56,6 +56,8 @@ export default function Scheduler() {
     });
     const [showFilters, setShowFilters] = useState(false);
 
+
+
     // Load departments on mount
     useEffect(() => {
         async function loadDepts() {
@@ -242,21 +244,28 @@ export default function Scheduler() {
     }, [schedule]);
 
     // Add section to schedule
+    // Add section to schedule
     async function addSection(sectionData) {
         setAddError(null);
+
+        // For DnD, we might pass dept/number in sectionData. 
+        // For Sidebar "Add", we use selectedDept/selectedCourse state.
+        const dept = sectionData.dept || selectedDept;
+        const courseNum = sectionData.number || selectedCourse;
 
         // Use pre-fetched details if available, otherwise (backup) fetch them
         let fullDetails = sectionData;
         if (!sectionData.schedule) {
             try {
-                fullDetails = await getSectionDetails(year, term, selectedDept, selectedCourse, sectionData.value);
+                // BUG FIX: Use the specific dept/courseNum, not just selected state
+                fullDetails = await getSectionDetails(year, term, dept, courseNum, sectionData.value);
             } catch (err) {
                 setAddError('Failed to load section details');
                 return;
             }
         }
 
-        const courseCode = `${selectedDept} ${selectedCourse}`;
+        const courseCode = sectionData.courseCode || `${dept} ${courseNum}`;
         const sectionId = fullDetails.info.name; // e.g. D100
         // Use the 'type' we calculated in loadSections (LEC, LAB, TUT)
         const componentType = sectionData.type || 'LEC';
@@ -900,7 +909,10 @@ export default function Scheduler() {
                     </div>
 
                     {DAYS.map(day => (
-                        <div key={day} className="day-column">
+                        <div
+                            key={day}
+                            className="day-column"
+                        >
                             {HOURS.map(hour => (
                                 <div key={hour} className="hour-line"></div>
                             ))}
@@ -925,7 +937,7 @@ export default function Scheduler() {
                                             style={{
                                                 ...getSlotStyle(slot.startTime, slot.endTime),
                                                 backgroundColor: course.color,
-                                                cursor: 'pointer',
+                                                cursor: 'pointer'
                                             }}
                                         >
                                             <div className="course-block-title">{course.courseCode}</div>
