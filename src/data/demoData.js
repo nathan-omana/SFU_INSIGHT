@@ -216,8 +216,8 @@ export const CMPT_225_DATA = {
     // Professors who teach CMPT 225
     professors: [
         {
-            id: 'prof-brian-fraser',
-            name: 'Brian Fraser',
+            id: 'prof-amirhossein-mozafari-khameneh',
+            name: 'Amirhossein Mozafari Khameneh',
             dept: 'CMPT',
             course: 'CMPT 225',
             rating: 4.7,
