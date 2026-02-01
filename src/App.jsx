@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     Search, BookOpen, Star, User, Lock, ExternalLink,
     ThumbsUp, X, Bookmark, BarChart2, MessageSquare,
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
+import { getDepartments } from './api/sfuCoursesApi';
 
 
 // --- MOCK DATA ---
@@ -107,6 +108,31 @@ function App() {
     const [hasContributed, setHasContributed] = useState(false);
     const [showContributionForm, setShowContributionForm] = useState(false);
     const [resourceVotes, setResourceVotes] = useState({});
+    const [majors, setMajors] = useState([]);
+    const [selectedMajor, setSelectedMajor] = useState('');
+    const [showMajorDropdown, setShowMajorDropdown] = useState(false);
+    const [loadingMajors, setLoadingMajors] = useState(false);
+
+    // Fetch majors on component mount
+    useEffect(() => {
+        async function fetchMajors() {
+            setLoadingMajors(true);
+            try {
+                const data = await getDepartments();
+                // If data is an array of strings, use directly; otherwise extract department names
+                if (Array.isArray(data)) {
+                    setMajors(data);
+                }
+            } catch (error) {
+                console.error('Failed to fetch majors:', error);
+                // Fallback to common SFU departments if API fails
+                setMajors(['CMPT', 'MACM', 'MATH', 'PHYS', 'CHEM', 'BISC', 'STAT', 'ECON', 'BUS', 'PSYC', 'ENSC', 'IAT', 'HSCI', 'ENGL', 'HIST', 'POL', 'CRIM', 'SA', 'GEOG', 'KIN']);
+            } finally {
+                setLoadingMajors(false);
+            }
+        }
+        fetchMajors();
+    }, []);
 
     // Search Logic
     const results = useMemo(() => {
@@ -227,6 +253,77 @@ function App() {
                                 {tab}
                             </button>
                         ))}
+                    </div>
+
+                    {/* Major Selection */}
+                    <div style={{ marginTop: '2rem', position: 'relative' }}>
+                        <button
+                            onClick={() => setShowMajorDropdown(!showMajorDropdown)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.875rem 1.5rem',
+                                backgroundColor: selectedMajor ? '#a6192e' : 'white',
+                                color: selectedMajor ? 'white' : '#374151',
+                                border: '2px solid',
+                                borderColor: selectedMajor ? '#a6192e' : '#e5e7eb',
+                                borderRadius: '50px',
+                                fontSize: '1rem',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+                            }}
+                        >
+                            <BookOpen size={20} />
+                            {selectedMajor || 'Select Your Major'}
+                            <span style={{ marginLeft: '0.25rem', fontSize: '0.75rem' }}>{showMajorDropdown ? '▲' : '▼'}</span>
+                        </button>
+
+                        {showMajorDropdown && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                marginTop: '0.5rem',
+                                backgroundColor: 'white',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '12px',
+                                boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                                maxHeight: '300px',
+                                overflowY: 'auto',
+                                width: '280px',
+                                zIndex: 100
+                            }}>
+                                {loadingMajors ? (
+                                    <div style={{ padding: '1rem', textAlign: 'center', color: '#6b7280' }}>Loading majors...</div>
+                                ) : (
+                                    majors.map((major, idx) => (
+                                        <div
+                                            key={idx}
+                                            onClick={() => {
+                                                setSelectedMajor(typeof major === 'string' ? major : major.name || major.value);
+                                                setShowMajorDropdown(false);
+                                            }}
+                                            style={{
+                                                padding: '0.75rem 1rem',
+                                                cursor: 'pointer',
+                                                borderBottom: idx < majors.length - 1 ? '1px solid #f3f4f6' : 'none',
+                                                transition: 'background-color 0.15s',
+                                                fontSize: '0.9375rem',
+                                                color: '#374151'
+                                            }}
+                                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                        >
+                                            {typeof major === 'string' ? major : major.name || major.value}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </section>

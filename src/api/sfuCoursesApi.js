@@ -104,3 +104,23 @@ export async function getInstructorReview(instructorName) {
         throw error;
     }
 }
+
+/**
+ * Fetch all departments (majors)
+ * Returns: Array of department codes and names
+ */
+export async function getDepartments() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/outlines`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error fetching departments:', error);
+        throw error;
+    }
+}
