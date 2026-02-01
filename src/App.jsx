@@ -352,7 +352,7 @@ function App() {
                     data: c._isLocal ? c.localData : {
                         id: `${c.dept}-${c.value}`,
                         code: `${c.dept.toUpperCase()} ${c.value}`,
-                        title: c.title || 'Course',
+                        title: c.title || 'Course: ',
                         term: 'Spring 2026',
                         description: `${c.dept.toUpperCase()} ${c.value} - ${c.title}`,
                         dept: c.dept,
@@ -568,7 +568,7 @@ function App() {
                                 data: {
                                     id: `${group.dept}-${c.value}`,
                                     code: `${group.dept.toUpperCase()} ${c.value}`,
-                                    title: c.title || 'Course',
+                                    title: c.title || 'Course: ',
                                     term: 'Spring 2026',
                                     description: `${group.dept.toUpperCase()} ${c.value} - ${c.title || 'Course details'}`,
                                     dept: group.dept,
@@ -1132,12 +1132,12 @@ function App() {
                                                             </div>
 
                                                             <div className="min-w-[120px]">
-                                                                <span className="text-xs text-gray-400 uppercase tracking-wider block">Course</span>
+                                                                <span className="text-xs text-gray-400 uppercase tracking-wider block">Course: </span>
                                                                 <span className="text-sm font-medium text-gray-600">{item.dept || item.course || 'N/A'}</span>
                                                             </div>
 
                                                             <div>
-                                                                <span className="text-xs text-gray-400 uppercase tracking-wider block">Difficulty</span>
+                                                                <span className="text-xs text-gray-400 uppercase tracking-wider block">Difficulty: </span>
                                                                 <span className={`text-sm font-bold px-2 py-0.5 rounded ${getLevelColor(item.metrics?.helpfulness || 4.5)}`}>
                                                                     {item.metrics?.helpfulness || '4.5'}/5
                                                                 </span>
@@ -1157,7 +1157,7 @@ function App() {
                                                     >
                                                         <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6 flex-1">
                                                             <div className="min-w-[150px]">
-                                                                <span className="text-xs text-gray-400 uppercase tracking-wider block">Course</span>
+                                                                <span className="text-xs text-gray-400 uppercase tracking-wider block">Course: </span>
                                                                 <h4 className="font-bold text-gray-800 group-hover:text-[#a6192e] transition-colors text-lg">
                                                                     {item?.data?.code}
                                                                 </h4>
@@ -1169,7 +1169,7 @@ function App() {
                                                             </div>
 
                                                             <div className="min-w-[100px]">
-                                                                <span className="text-xs text-gray-400 uppercase tracking-wider block">Difficulty</span>
+                                                                <span className="text-xs text-gray-400 uppercase tracking-wider block">Difficulty: </span>
                                                                 <span className={`text-sm font-bold px-2 py-0.5 rounded ${getLevelColor(item?.data?.metrics?.difficulty || 3.5)}`}>
                                                                     {item?.data?.metrics?.difficulty || '3.5'}/5
                                                                 </span>
@@ -1260,7 +1260,7 @@ function App() {
                                                 </div>
                                             </div>
                                             <div className="bg-gray-50 p-4 rounded-xl text-center border border-gray-100">
-                                                <div className="text-sm text-gray-500 uppercase tracking-wide mb-1">Difficulty</div>
+                                                <div className="text-sm text-gray-500 uppercase tracking-wide mb-1">Difficulty: </div>
                                                 <div className="text-3xl font-bold text-gray-900">
                                                     {rmpLoading ? <span className="animate-pulse">...</span> : (rmpData?.avgDifficulty?.toFixed(1) || 'N/A')}
                                                 </div>
@@ -1345,71 +1345,114 @@ function App() {
                                 ) : (
                                     /* Course Modal Content */
                                     <>
-                                        <div className="p-6 md:p-8 border-b border-gray-100 bg-gray-50">
-                                            <div className="flex items-start justify-between mb-2">
-                                                <div>
-                                                    <h2 className="text-3xl font-bold text-gray-900">{selectedItem.code}</h2>
-                                                    <h3 className="text-lg text-gray-600">{selectedItem.title}</h3>
+                                        {/* Header */}
+                                        <div className="p-6 md:p-8 bg-white border-b border-gray-100">
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="flex-1">
+                                                    <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">{selectedItem.code}</h2>
+                                                    <h3 className="text-base md:text-lg text-gray-600">{selectedItem.title}</h3>
                                                 </div>
-                                                <div className={`px-3 py-1 rounded-full text-sm font-bold ${getLevelColor(selectedItem.metrics.difficulty)
-                                                    }`}>
-                                                    Difficulty: {selectedItem.metrics.difficulty}/5
+                                                <div className={`shrink-0 px-4 py-2 rounded-lg text-sm font-bold ${getLevelColor(selectedItem.metrics.difficulty)}`}>
+                                                    {selectedItem.metrics.difficulty}/5
                                                 </div>
                                             </div>
-                                            <p className="text-gray-500 text-sm mb-4 leading-relaxed">{selectedItem.description}</p>
-
-                                            <div className="flex gap-4 text-sm text-gray-600">
-                                                <div className="flex items-center gap-1.5"><CheckCircle size={16} className="text-green-600" /> {selectedItem.term}</div>
-                                                <div className="flex items-center gap-1.5"><User size={16} /> {selectedItem.metrics.n} Reviews</div>
+                                            <p className="text-gray-500 text-sm mt-3 leading-relaxed">{selectedItem.description}</p>
+                                            <div className="flex flex-wrap gap-3 mt-4 text-sm">
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-full font-medium">
+                                                    <CheckCircle size={14} /> {selectedItem.term}
+                                                </span>
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 text-gray-700 rounded-full font-medium">
+                                                    <User size={14} /> {selectedItem.metrics.n} Reviews
+                                                </span>
                                             </div>
                                         </div>
 
-                                        <div className="p-6 md:p-8 grid md:grid-cols-2 gap-8">
-                                            <div className="space-y-6">
-                                                <StatBar label="Avg Workload" value={`${selectedItem.metrics.workload} h/week`} percent={selectedItem.metrics.workload * 5} color="bg-blue-500" />
+                                        {/* Action Buttons Grid */}
+                                        <div className="p-4 md:p-6 bg-gray-50 border-b border-gray-100">
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                <button
+                                                    onClick={() => {
+                                                        const next = new Set(savedCourses);
+                                                        if (next.has(selectedItem.id)) next.delete(selectedItem.id);
+                                                        else next.add(selectedItem.id);
+                                                        setSavedCourses(next);
+                                                    }}
+                                                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-200 ${savedCourses.has(selectedItem.id)
+                                                        ? 'bg-[#a6192e] text-white shadow-md hover:bg-[#8a1526]'
+                                                        : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-[#a6192e] hover:bg-red-50 hover:text-[#a6192e] hover:shadow-lg'
+                                                        }`}
+                                                >
+                                                    <Bookmark size={18} fill={savedCourses.has(selectedItem.id) ? 'currentColor' : 'none'} />
+                                                    {savedCourses.has(selectedItem.id) ? 'Saved ✓' : 'Save Course'}
+                                                </button>
+
+                                                <button
+                                                    onClick={() => setShowContributionForm(true)}
+                                                    className="flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-gray-200 rounded-lg font-semibold text-sm text-gray-700 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 hover:shadow-lg transition-all duration-200"
+                                                >
+                                                    <Star size={18} />
+                                                    Rate Course
+                                                </button>
+
+                                                <button
+                                                    onClick={() => window.open(`https://www.sfu.ca/outlines.html?${selectedItem.code.replace(' ', '+')}`, '_blank')}
+                                                    className="flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-gray-200 rounded-lg font-semibold text-sm text-gray-700 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 hover:shadow-lg transition-all duration-200"
+                                                >
+                                                    <ExternalLink size={18} />
+                                                    SFU Outline
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Stats Section */}
+                                        <div className="p-6 md:p-8">
+                                            <h4 className="font-bold text-gray-900 mb-4 text-sm uppercase tracking-wide">Course Metrics</h4>
+                                            <div className="grid gap-4 mb-6">
+                                                <StatBar label="Average Workload" value={`${selectedItem.metrics.workload} h/week`} percent={selectedItem.metrics.workload * 5} color="bg-blue-500" />
                                                 <StatBar label="Fairness" value={selectedItem.metrics.fairness} percent={(selectedItem.metrics.fairness / 5) * 100} color="bg-emerald-500" />
                                                 <StatBar label="Clarity" value={selectedItem.metrics.clarity} percent={(selectedItem.metrics.clarity / 5) * 100} color="bg-purple-500" />
+                                            </div>
 
-                                                <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
-                                                    <h4 className="font-bold text-orange-900 text-sm mb-2">Assessment</h4>
+                                            {selectedItem.assessment && selectedItem.assessment.length > 0 && (
+                                                <div className="p-4 bg-orange-50 rounded-xl border border-orange-100 mb-6">
+                                                    <h4 className="font-bold text-orange-900 text-sm mb-3 flex items-center gap-2">
+                                                        <BarChart2 size={16} /> Assessment Types
+                                                    </h4>
                                                     <div className="flex flex-wrap gap-2">
                                                         {selectedItem.assessment.map(a => (
-                                                            <span key={a} className="bg-white px-2 py-1 rounded text-xs font-medium text-orange-800 border border-orange-100 shadow-sm">{a}</span>
+                                                            <span key={a} className="bg-white px-3 py-1.5 rounded-lg text-xs font-medium text-orange-800 border border-orange-200 hover:bg-orange-100 transition-colors cursor-default">{a}</span>
                                                         ))}
                                                     </div>
                                                 </div>
-                                            </div>
+                                            )}
 
-                                            <div className="flex flex-col justify-center h-full space-y-6">
-                                                <div className="bg-gradient-to-br from-red-50 to-white p-6 rounded-2xl border border-red-100 shadow-sm">
-                                                    <h4 className="text-lg font-bold text-gray-900 mb-2">Want the A+ blueprint?</h4>
-                                                    <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-                                                        Access our curated guide for <b>{selectedItem.code}</b>. Includes community notes, video tutorials, and past syllabi.
-                                                    </p>
-
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedItem(selectedItem); // Keep context
-                                                            setCurrentView('success-guide');
-                                                        }}
-                                                        className="w-full group relative flex items-center justify-center gap-3 py-3 bg-[#a6192e] hover:bg-[#8a1526] text-white rounded-xl font-bold shadow-lg shadow-red-900/10 hover:shadow-xl hover:shadow-red-900/20 transition-all transform hover:-translate-y-0.5"
-                                                    >
-                                                        <span>How to succeed in {selectedItem.code.split(' ')[0]}</span>
-                                                        <div className="bg-white/20 p-1 rounded-full group-hover:translate-x-1 transition-transform">
-                                                            <ArrowRight size={16} />
-                                                        </div>
-                                                    </button>
-
-                                                    <div className="mt-4 text-center">
-                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Powered by Crowd Data</span>
-                                                    </div>
-                                                </div>
+                                            {/* Success Guide CTA */}
+                                            <div className="bg-gradient-to-r from-red-50 to-white p-5 rounded-xl border border-red-100">
+                                                <h4 className="font-bold text-gray-900 mb-2">PATH TO SUCCESS</h4>
+                                                <p className="text-sm text-gray-600 mb-4">
+                                                    Access community notes, video tutorials, and past syllabi for <b>{selectedItem.code}</b>.
+                                                </p>
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedItem(selectedItem);
+                                                        setCurrentView('success-guide');
+                                                    }}
+                                                    className="w-full flex items-center justify-center gap-3 py-3.5 bg-[#a6192e] hover:bg-[#8a1526] text-white rounded-lg font-bold shadow-md hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5"
+                                                >
+                                                    <span>PATH TO SUCCESS IN {selectedItem.code.split(' ')[0]}</span>
+                                                    <ArrowRight size={18} />
+                                                </button>
                                             </div>
                                         </div>
 
+                                        {/* Footer */}
                                         {!hasContributed && (
-                                            <div className="bg-amber-50 p-3 text-center text-xs font-medium text-amber-800 border-t border-amber-100 rounded-b-lg">
-                                                <span className="font-bold">2,402 students</span> unlocked insights this week.
+                                            <div
+                                                className="bg-amber-50 p-4 text-center text-sm font-medium text-amber-800 border-t border-amber-100 rounded-b-lg hover:bg-amber-100 transition-colors cursor-pointer flex items-center justify-center gap-2"
+                                                onClick={() => setShowContributionForm(true)}
+                                            >
+                                                <Zap size={16} className="text-amber-500" />
+                                                <span><b>2,402 students</b> unlocked insights this week. Share yours!</span>
                                             </div>
                                         )}
                                     </>
@@ -1507,7 +1550,7 @@ function CourseCard({ course, onClick, saved, onToggleSave }) {
             </div>
 
             <div className="flex gap-4 mt-4">
-                <Metric badge label="Difficulty" value={course.metrics.difficulty} max={5} />
+                <Metric badge label="Difficulty: " value={course.metrics.difficulty} max={5} />
                 <Metric label="Workload" value={`${course.metrics.workload}h`} />
             </div>
 
