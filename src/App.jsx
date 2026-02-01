@@ -199,7 +199,7 @@ function App() {
 
 
             {/* 2. Hero Search */}
-            <section className="pt-20 pb-12 px-4 flex justify-center">
+            <section className="pt-80 pb-12 px-4 flex justify-center">
                 <div className="w-full max-w-4xl text-center">
                     <h1 className="text-4xl md:text-5xl text-gray-900 mb-4 tracking-tight">
                         Honest insights into SFU courses, powered by students like you.
@@ -208,12 +208,10 @@ function App() {
                         , real difficulty, instructor vibeWorkloads, topic maps, and best resources—powered by students like you.
                     </p> */}
 
-                    <div className="relative max-w-2xl mx-auto mb-8">
-                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" size={24} />
+                    <div className="max-w-2xl mx-auto mb-8">
                         <input
                             type="text"
-                            placeholder="Search course code (e.g. CMPT 225), title, or professor..."
-                            className="search-input"
+                            placeholder="Course code, title, description, or professor name..." className="search-input"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             autoFocus
