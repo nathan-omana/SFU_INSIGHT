@@ -1094,40 +1094,57 @@ function App() {
                                             overflowY: 'auto',
                                             padding: '0.5rem'
                                         }}>
-                                            {majorCourses.map((course, idx) => (
-                                                <div
-                                                    key={course.value || idx}
-                                                    onClick={() => setSearch(`${selectedMajor.toUpperCase()} ${course.value || course.text}`)}
-                                                    style={{
-                                                        padding: '0.875rem',
-                                                        backgroundColor: 'white',
-                                                        border: '1px solid #e5e7eb',
-                                                        borderRadius: '10px',
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.2s',
-                                                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                                                    }}
-                                                    onMouseOver={(e) => {
-                                                        e.currentTarget.style.borderColor = '#a6192e';
-                                                        e.currentTarget.style.transform = 'translateY(-2px)';
-                                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(166,25,46,0.15)';
-                                                    }}
-                                                    onMouseOut={(e) => {
-                                                        e.currentTarget.style.borderColor = '#e5e7eb';
-                                                        e.currentTarget.style.transform = 'translateY(0)';
-                                                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
-                                                    }}
-                                                >
-                                                    <div style={{ fontWeight: '600', color: '#a6192e', fontSize: '0.9375rem' }}>
-                                                        {selectedMajor.toUpperCase()} {course.value || course.text}
-                                                    </div>
-                                                    {course.title && (
-                                                        <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem', lineHeight: '1.3' }}>
-                                                            {course.title}
+                                            {majorCourses.map((course, idx) => {
+                                                const courseCode = `${selectedMajor.toUpperCase()} ${course.value || course.text}`;
+                                                return (
+                                                    <div
+                                                        key={course.value || idx}
+                                                        onClick={() => {
+                                                            // Open course modal directly
+                                                            const courseObj = {
+                                                                id: courseCode.replace(' ', '-').toLowerCase(),
+                                                                code: courseCode,
+                                                                title: course.title || courseCode,
+                                                                description: course.title || `Course ${courseCode}`,
+                                                                term: 'Spring 2026',
+                                                                metrics: { difficulty: 3.5, workload: 8, fairness: 4, clarity: 4, n: 0 },
+                                                                assessment: [],
+                                                                tips: [],
+                                                                resources: []
+                                                            };
+                                                            setSelectedItem(courseObj);
+                                                        }}
+                                                        style={{
+                                                            padding: '0.875rem',
+                                                            backgroundColor: 'white',
+                                                            border: '1px solid #e5e7eb',
+                                                            borderRadius: '10px',
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s',
+                                                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                                                        }}
+                                                        onMouseOver={(e) => {
+                                                            e.currentTarget.style.borderColor = '#a6192e';
+                                                            e.currentTarget.style.transform = 'translateY(-2px)';
+                                                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(166,25,46,0.15)';
+                                                        }}
+                                                        onMouseOut={(e) => {
+                                                            e.currentTarget.style.borderColor = '#e5e7eb';
+                                                            e.currentTarget.style.transform = 'translateY(0)';
+                                                            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+                                                        }}
+                                                    >
+                                                        <div style={{ fontWeight: '600', color: '#a6192e', fontSize: '0.9375rem' }}>
+                                                            {courseCode}
                                                         </div>
-                                                    )}
-                                                </div>
-                                            ))}
+                                                        {course.title && (
+                                                            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem', lineHeight: '1.3' }}>
+                                                                {course.title}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })}
                                         </div>
                                     ) : (
                                         <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af' }}>
