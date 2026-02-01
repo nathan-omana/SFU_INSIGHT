@@ -168,7 +168,24 @@ export default function Scheduler() {
                                 ...details,
                                 // Add helper fields for filtering
                                 campus: details.campus || 'BURNABY', // Default
-                                type: sec.sectionCode?.match(/^[A-Z]+/)?.[0] || 'LEC',
+                                type: (() => {
+                                    const rawType = (details.info?.type || '').toUpperCase();
+                                    const secCode = sec.sectionCode || '';
+
+                                    if (rawType === 'E') return 'LEC'; // Enrollment section
+                                    if (rawType === 'N') return 'LAB'; // Non-enrollment (Lab/Tut)
+
+                                    if (rawType.includes('LAB')) return 'LAB';
+                                    if (rawType.includes('TUT')) return 'TUT';
+                                    if (rawType.includes('SEM')) return 'SEM';
+                                    if (rawType.includes('LEC')) return 'LEC';
+
+                                    // Fallback Heuristic: D100, E100 are usually Lectures. D101+ are labs.
+                                    if (secCode.endsWith('00')) return 'LEC';
+
+                                    // Default
+                                    return 'LEC';
+                                })(),
                                 credits: details.units || 3
                             };
                         } catch (e) {
@@ -241,8 +258,10 @@ export default function Scheduler() {
 
         const courseCode = `${selectedDept} ${selectedCourse}`;
         const sectionId = fullDetails.info.name; // e.g. D100
+        // Use the 'type' we calculated in loadSections (LEC, LAB, TUT)
+        const componentType = sectionData.type || 'LEC';
 
-        // Check for duplicates
+        // Check for duplicates (Exact same section)
         const isDuplicate = schedule.some(c => c.courseCode === courseCode && c.section === sectionId);
         if (isDuplicate) {
             setAddError(`${courseCode} ${sectionId} is already in your schedule.`);
@@ -259,7 +278,6 @@ export default function Scheduler() {
             for (const sch of fullDetails.courseSchedule) {
                 // Filter: Only include schedule slots that match the section we are adding
                 // OR if it's the main section (e.g. LEC) and the slot matches that component
-                // This prevents adding random labs associated with the course unless explicitly selected
                 if (sch.sectionCode !== sectionId && sch.sectionCode !== sectionData.sectionCode) {
                     continue;
                 }
@@ -289,14 +307,15 @@ export default function Scheduler() {
                     endTime: sch.endTime
                 }
 
-                // Check against existing schedule (EXCLUDING self if swapping)
-                // We will filter out the SAME course from the conflict check to allow replacement
-                const otherCourses = schedule.filter(c => c.courseCode !== courseCode);
+                // Check against existing schedule
+                // IGNORE the specific component we are replacing (same course + same type)
+                // BUT check against everything else (different courses OR different components of same course)
+                const otherCourses = schedule.filter(c => !(c.courseCode === courseCode && c.componentType === componentType));
 
                 for (const existingCourse of otherCourses) {
                     for (const existSlot of existingCourse.schedule) {
                         if (checkTimeConflict(newSlot, existSlot)) {
-                            setAddError(`⚠️ Time conflict! overlaps with ${existingCourse.courseCode}`);
+                            setAddError(`⚠️ Time conflict with ${existingCourse.courseCode} (${existingCourse.section})`);
                             setTimeout(() => setAddError(null), 5000);
                             return; // Stop adding this section if conflict found
                         }
@@ -308,8 +327,9 @@ export default function Scheduler() {
         // Add to schedule
         const newCourse = {
             courseCode,
-            section: sectionId,
-            sectionCode: fullDetails.info.sectionCode || 'LEC', // e.g. LEC
+            section: sectionId, // D100
+            sectionCode: fullDetails.info.sectionCode || 'LEC', // LEC (API code)
+            componentType: componentType, // LEC, LAB, TUT (Our normalized type)
             title: fullDetails.info.title,
             instructor: fullDetails.instructor?.[0]?.name || 'TBA',
             color: getCourseColor(courseCode),
@@ -319,8 +339,15 @@ export default function Scheduler() {
         };
 
         setSchedule(prev => {
-            // Remove any existing instance of this course (Swap Logic)
-            const filtered = prev.filter(c => c.courseCode !== courseCode);
+            // Smart Swap: Only remove the same TYPE of section for this course
+            const filtered = prev.filter(c => {
+                // Keep distinct courses
+                if (c.courseCode !== courseCode) return true;
+
+                // For the SAME course, only remove if the component type matches
+                // (e.g. Remove existing LAB if adding a LAB. Keep LEC.)
+                return c.componentType !== componentType;
+            });
             return [...filtered, newCourse];
         });
         setConflicts([]); // Clear conflicts if successful
@@ -587,7 +614,7 @@ export default function Scheduler() {
                             </button>
                         </div>
 
-                        {/* Filters Panel */}
+                        {/* Filters Panel - Simplified */}
                         {showFilters && (
                             <div style={{ marginBottom: '1rem', padding: '0.75rem', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '0.75rem' }}>
                                 <div style={{ marginBottom: '0.5rem' }}>
@@ -600,20 +627,6 @@ export default function Scheduler() {
                                                     checked={filters.campus.includes(c)}
                                                     onChange={() => handleFilterChange('campus', c)}
                                                 /> {c.charAt(0) + c.slice(1).toLowerCase()}
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div style={{ marginBottom: '0.5rem' }}>
-                                    <div style={{ fontWeight: '600', marginBottom: '0.25rem', color: '#374151' }}>Type</div>
-                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                                        {['LEC', 'LAB', 'TUT'].map(t => (
-                                            <label key={t} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={filters.instructionMode.includes(t)}
-                                                    onChange={() => handleFilterChange('instructionMode', t)}
-                                                /> {t}
                                             </label>
                                         ))}
                                     </div>
@@ -638,59 +651,135 @@ export default function Scheduler() {
                         {loadingSections ? (
                             <p style={{ fontSize: '0.875rem', color: '#9ca3af' }}>Loading sections...</p>
                         ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '300px', overflowY: 'auto' }}>
-                                {sections
-                                    .filter(s => {
-                                        // Campus Filter
-                                        if (filters.campus.length > 0 && !filters.campus.includes(s.campus)) return false;
-                                        // Type Filter
-                                        if (filters.instructionMode.length > 0 && !filters.instructionMode.includes(s.type)) return false;
-                                        // Time Filter
-                                        if (filters.timeOfDay.length > 0 && s.courseSchedule) {
-                                            const times = s.courseSchedule.map(sch => parseInt(sch.startTime.split(':')[0]));
-                                            const isMorning = times.some(t => t < 12);
-                                            const isAfternoon = times.some(t => t >= 12 && t < 17);
-                                            const isEvening = times.some(t => t >= 17);
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '500px', overflowY: 'auto' }}>
 
-                                            const matches = (filters.timeOfDay.includes('Morning') && isMorning) ||
-                                                (filters.timeOfDay.includes('Afternoon') && isAfternoon) ||
-                                                (filters.timeOfDay.includes('Evening') && isEvening);
-                                            if (!matches) return false;
-                                        }
-                                        return true;
-                                    })
-                                    .map(s => (
-                                        <button key={s.value} onClick={() => addSection(s)} className="section-item">
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.125rem' }}>
-                                                    <span className={`section-badge ${s.type?.toLowerCase() || 'lec'}`}>
-                                                        {s.type || 'LEC'}
-                                                    </span>
-                                                    <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>{s.text}</span>
-                                                    <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: '400' }}>#{s.info?.classNumber || '---'}</span>
-                                                </div>
-                                                <div style={{ fontSize: '0.75rem', color: '#6b7280', display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
-                                                    <div>👨‍🏫 {s.instructor?.[0]?.name || 'TBA'}</div>
-                                                    <div>
-                                                        <span style={{
-                                                            color: s.campus === 'SURREY' ? '#16a34a' : s.campus === 'BURNABY' ? '#7c3aed' : '#6b7280',
-                                                            fontWeight: '500'
-                                                        }}>{s.campus}</span> • {s.courseSchedule?.[0]?.days} {s.courseSchedule?.[0]?.startTime}-{s.courseSchedule?.[0]?.endTime}
+                                {/* Step 1: Lectures */}
+                                <div>
+                                    <h4 style={{ fontSize: '0.75rem', fontWeight: '700', color: '#a6192e', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        Step 1: Select Lecture
+                                    </h4>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                        {sections
+                                            .filter(s => s.type === 'LEC')
+                                            .filter(s => {
+                                                if (filters.campus.length > 0 && !filters.campus.includes(s.campus)) return false;
+                                                return true;
+                                            })
+                                            .map(s => (
+                                                <button key={s.value} onClick={() => addSection(s)} className="section-item" style={{ borderLeft: schedule.some(c => c.section === s.text) ? '4px solid #10b981' : '1px solid #e5e7eb' }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.125rem' }}>
+                                                            <span className="section-badge lec">LEC</span>
+                                                            <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>{s.text}</span>
+                                                            {schedule.some(c => c.section === s.text) && <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 'bold' }}>✓ Added</span>}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                                                            {s.instructor?.[0]?.name || 'TBA'} • {s.courseSchedule?.[0]?.days} {s.courseSchedule?.[0]?.startTime}-{s.courseSchedule?.[0]?.endTime}
+                                                        </div>
                                                     </div>
+                                                    <Plus size={16} color="#9ca3af" />
+                                                </button>
+                                            ))}
+                                        {sections.filter(s => s.type === 'LEC').length === 0 && (
+                                            <div style={{ padding: '0.5rem', color: '#9ca3af', fontSize: '0.8rem', fontStyle: 'italic' }}>No lectures found (or only labs available).</div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Step 2: Labs & Tutorials */}
+                                {(() => {
+                                    // 1. Find the currently selected lecture for this course in the schedule
+                                    const scheduledItems = schedule.filter(c => c.courseCode === `${selectedDept} ${selectedCourse}`);
+
+                                    // Try to find the lecture:
+                                    // First check for explicit componentType 'LEC' (added in new logic)
+                                    // Fallback to checking against sections list
+                                    const selectedLecture = scheduledItems.find(item =>
+                                        item.componentType === 'LEC' ||
+                                        sections.find(s => s.text === item.section && s.type === 'LEC')
+                                    );
+
+                                    // Check if this course is "Lecture-less" (e.g. only labs - rare but possible)
+                                    const hasLectures = sections.some(s => s.type === 'LEC');
+
+                                    // Logic:
+                                    // If course has lectures but none selected -> Show "Select Lecture first"
+                                    // If course has lectures and one selected -> Show filtered labs
+                                    // If course has NO lectures -> Show all labs immediately
+
+                                    // 3. Filter Sections Logic
+                                    // First, get all non-lecture sections (Labs, Tuts)
+                                    let relevantSections = sections.filter(s => s.type !== 'LEC');
+
+                                    // Apply User Filters (Campus, Time) - these are hard filters
+                                    relevantSections = relevantSections.filter(s => {
+                                        if (filters.campus.length > 0 && !filters.campus.includes(s.campus)) return false;
+                                        return true;
+                                    });
+                                    // Apply Association Logic (Heuristic for D100 -> D101)
+                                    // We only apply this matching if it yields results.
+                                    // If strict matching hides ALL labs, we assume the heuristic is invalid for this course
+                                    // (e.g. Lecture A, Lab 01) and fall back to showing all relevantSections.
+                                    // Apply Association Logic (e.g., Lecture D100 -> Labs D101, D102)
+                                    // 2. Strict Filtering Logic
+                                    if (hasLectures && selectedLecture) {
+                                        // Extract the actual section code (e.g., get "D100" out of "CMPT 201 D100")
+                                        const fullText = (selectedLecture.section || '').trim().toUpperCase();
+                                        const parts = fullText.split(' ');
+                                        const sectionCode = parts[parts.length - 1]; // Grabs the last word (D100)
+
+                                        // Get the Prefix (D or E)
+                                        const lecPrefix = sectionCode.charAt(0);
+
+                                        // Filter labs to ONLY those starting with the same letter
+                                        relevantSections = relevantSections.filter(s => {
+                                            const labText = (s.text || '').trim().toUpperCase();
+                                            // This ensures "D101" matches "D", but "E101" does not
+                                            return labText.startsWith(lecPrefix);
+                                        });
+                                    }
+
+                                    // If there are no labs/tuts at all for this course, hide Step 2
+                                    if (sections.filter(s => s.type !== 'LEC').length === 0) return null;
+
+                                    return (
+                                        <div className="animate-fade-in" style={{ marginTop: '0.5rem' }}>
+                                            <h4 style={{ fontSize: '0.75rem', fontWeight: '700', color: '#a6192e', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                Step 2: Select Lab / Tutorial {selectedLecture ? `(for ${selectedLecture.section})` : ''}
+                                            </h4>
+
+                                            {hasLectures && !selectedLecture ? (
+                                                <div style={{ padding: '0.75rem', background: '#fff1f2', border: '1px dashed #e11d48', borderRadius: '6px', color: '#9f1239', fontSize: '0.8rem', textAlign: 'center' }}>
+                                                    Please select a Lecture from Step 1 to see available Labs/Tutorials.
                                                 </div>
-                                            </div>
-                                            <Plus size={16} color="#9ca3af" />
-                                        </button>
-                                    ))}
-                                {sections.length > 0 && sections.filter(s => {
-                                    if (filters.campus.length > 0 && !filters.campus.includes(s.campus)) return false;
-                                    if (filters.instructionMode.length > 0 && !filters.instructionMode.includes(s.type)) return false;
-                                    return true;
-                                }).length === 0 && (
-                                        <div style={{ textAlign: 'center', padding: '1rem', color: '#9ca3af', fontSize: '0.875rem' }}>
-                                            No sections match filters
+                                            ) : (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                                    {relevantSections.map(s => (
+                                                        <button key={s.value} onClick={() => addSection(s)} className="section-item">
+                                                            <div style={{ flex: 1 }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.125rem' }}>
+                                                                    <span className={`section-badge ${s.type?.toLowerCase() || 'lab'}`}>{s.type || 'LAB'}</span>
+                                                                    <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>{s.text}</span>
+                                                                    {schedule.some(c => c.section === s.text) && <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 'bold' }}>✓ Added</span>}
+                                                                </div>
+                                                                <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                                                                    {s.courseSchedule?.[0]?.days || 'TBA'} {s.courseSchedule?.[0]?.startTime}-{s.courseSchedule?.[0]?.endTime}
+                                                                </div>
+                                                            </div>
+                                                            <Plus size={16} color="#9ca3af" />
+                                                        </button>
+                                                    ))}
+                                                    {relevantSections.length === 0 && (
+                                                        <div style={{ padding: '0.5rem', color: '#9ca3af', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                                                            No compatible labs found matching section {selectedLecture?.section}. <br />
+                                                            (Try a different lecture if available)
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
+                                    );
+                                })()}
                             </div>
                         )}
                     </div>
