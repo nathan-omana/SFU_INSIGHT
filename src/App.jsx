@@ -7,6 +7,7 @@ import {
 
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
 import { getDepartments } from './api/sfuCoursesApi';
+import Scheduler from './components/Scheduler';
 
 
 // --- MOCK DATA ---
@@ -112,6 +113,7 @@ function App() {
     const [selectedMajor, setSelectedMajor] = useState('');
     const [showMajorDropdown, setShowMajorDropdown] = useState(false);
     const [loadingMajors, setLoadingMajors] = useState(false);
+    const [currentView, setCurrentView] = useState('home'); // 'home' or 'scheduler'
 
     // Fetch majors on component mount
     useEffect(() => {
@@ -192,7 +194,7 @@ function App() {
                     </div>
 
                     <nav style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <a href="#" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.125rem', fontWeight: '600', color: 'white', padding: '0.75rem 1.25rem', borderRadius: '8px', transition: 'all 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                        <a href="#" onClick={(e) => { e.preventDefault(); setCurrentView(currentView === 'scheduler' ? 'home' : 'scheduler'); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.125rem', fontWeight: '600', color: 'white', padding: '0.75rem 1.25rem', borderRadius: '8px', transition: 'all 0.2s', backgroundColor: currentView === 'scheduler' ? 'rgba(255,255,255,0.2)' : 'transparent' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = currentView === 'scheduler' ? 'rgba(255,255,255,0.2)' : 'transparent'}>
                             <BarChart2 size={22} />
                             <span>Schedule</span>
                         </a>
@@ -222,368 +224,376 @@ function App() {
                 </div>
             </header>
 
+            {/* Scheduler View */}
+            {currentView === 'scheduler' && <Scheduler />}
 
-            {/* 2. Hero Search */}
-            <section className="pt-24 pb-12 px-4 flex justify-center">
-                <div className="w-full max-w-4xl text-center">
-                    <h1 className="text-4xl md:text-5xl text-gray-900 mb-4 tracking-tight">
-                        Honest insights into SFU courses, powered by students like you.
-                    </h1>
-                    {/* <p className="text-lg text-gray-500 mb-10 max-w-2xl mx-auto">
+            {/* Home View */}
+            {currentView === 'home' && (
+                <>
+                    {/* 2. Hero Search */}
+                    <section className="pt-24 pb-12 px-4 flex justify-center">
+                        <div className="w-full max-w-4xl text-center">
+                            <h1 className="text-4xl md:text-5xl text-gray-900 mb-4 tracking-tight">
+                                Honest insights into SFU courses, powered by students like you.
+                            </h1>
+                            {/* <p className="text-lg text-gray-500 mb-10 max-w-2xl mx-auto">
                         , real difficulty, instructor vibeWorkloads, topic maps, and best resources—powered by students like you.
                     </p> */}
 
-                    <div className="max-w-2xl mx-auto mb-8">
-                        <input
-                            type="text"
-                            placeholder="Course code, title, description, or professor name..." className="search-input"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            autoFocus
-                        />
-                    </div>
+                            <div className="max-w-2xl mx-auto mb-8">
+                                <input
+                                    type="text"
+                                    placeholder="Course code, title, description, or professor name..." className="search-input"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
 
-                    <div className="flex items-center justify-center gap-3">
-                        {['All', 'Courses', 'Professors'].map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`chip ${activeTab === tab ? 'active' : ''}`}
-                            >
-                                {tab}
-                            </button>
-                        ))}
-                    </div>
+                            <div className="flex items-center justify-center gap-3">
+                                {['All', 'Courses', 'Professors'].map(tab => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setActiveTab(tab)}
+                                        className={`chip ${activeTab === tab ? 'active' : ''}`}
+                                    >
+                                        {tab}
+                                    </button>
+                                ))}
+                            </div>
 
-                    {/* Major Selection */}
-                    <div style={{ marginTop: '2rem', position: 'relative' }}>
-                        <button
-                            onClick={() => setShowMajorDropdown(!showMajorDropdown)}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.875rem 1.5rem',
-                                backgroundColor: selectedMajor ? '#a6192e' : 'white',
-                                color: selectedMajor ? 'white' : '#374151',
-                                border: '2px solid',
-                                borderColor: selectedMajor ? '#a6192e' : '#e5e7eb',
-                                borderRadius: '50px',
-                                fontSize: '1rem',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-                            }}
-                        >
-                            <BookOpen size={20} />
-                            {selectedMajor || 'Select Your Major'}
-                            <span style={{ marginLeft: '0.25rem', fontSize: '0.75rem' }}>{showMajorDropdown ? '▲' : '▼'}</span>
-                        </button>
+                            {/* Major Selection */}
+                            <div style={{ marginTop: '2rem', position: 'relative' }}>
+                                <button
+                                    onClick={() => setShowMajorDropdown(!showMajorDropdown)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        padding: '0.875rem 1.5rem',
+                                        backgroundColor: selectedMajor ? '#a6192e' : 'white',
+                                        color: selectedMajor ? 'white' : '#374151',
+                                        border: '2px solid',
+                                        borderColor: selectedMajor ? '#a6192e' : '#e5e7eb',
+                                        borderRadius: '50px',
+                                        fontSize: '1rem',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+                                    }}
+                                >
+                                    <BookOpen size={20} />
+                                    {selectedMajor || 'Select Your Major'}
+                                    <span style={{ marginLeft: '0.25rem', fontSize: '0.75rem' }}>{showMajorDropdown ? '▲' : '▼'}</span>
+                                </button>
 
-                        {showMajorDropdown && (
-                            <div style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: '50%',
-                                transform: 'translateX(-50%)',
-                                marginTop: '0.5rem',
-                                backgroundColor: 'white',
-                                border: '1px solid #e5e7eb',
-                                borderRadius: '12px',
-                                boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
-                                maxHeight: '300px',
-                                overflowY: 'auto',
-                                width: '280px',
-                                zIndex: 100
-                            }}>
-                                {loadingMajors ? (
-                                    <div style={{ padding: '1rem', textAlign: 'center', color: '#6b7280' }}>Loading majors...</div>
-                                ) : (
-                                    majors.map((major, idx) => (
-                                        <div
-                                            key={idx}
-                                            onClick={() => {
-                                                setSelectedMajor(typeof major === 'string' ? major : major.name || major.value);
-                                                setShowMajorDropdown(false);
-                                            }}
-                                            style={{
-                                                padding: '0.75rem 1rem',
-                                                cursor: 'pointer',
-                                                borderBottom: idx < majors.length - 1 ? '1px solid #f3f4f6' : 'none',
-                                                transition: 'background-color 0.15s',
-                                                fontSize: '0.9375rem',
-                                                color: '#374151'
-                                            }}
-                                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-                                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                        >
-                                            {typeof major === 'string' ? major : major.name || major.value}
-                                        </div>
-                                    ))
+                                {showMajorDropdown && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '100%',
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        marginTop: '0.5rem',
+                                        backgroundColor: 'white',
+                                        border: '1px solid #e5e7eb',
+                                        borderRadius: '12px',
+                                        boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                                        maxHeight: '300px',
+                                        overflowY: 'auto',
+                                        width: '280px',
+                                        zIndex: 100
+                                    }}>
+                                        {loadingMajors ? (
+                                            <div style={{ padding: '1rem', textAlign: 'center', color: '#6b7280' }}>Loading majors...</div>
+                                        ) : (
+                                            majors.map((major, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    onClick={() => {
+                                                        setSelectedMajor(typeof major === 'string' ? major : major.name || major.value);
+                                                        setShowMajorDropdown(false);
+                                                    }}
+                                                    style={{
+                                                        padding: '0.75rem 1rem',
+                                                        cursor: 'pointer',
+                                                        borderBottom: idx < majors.length - 1 ? '1px solid #f3f4f6' : 'none',
+                                                        transition: 'background-color 0.15s',
+                                                        fontSize: '0.9375rem',
+                                                        color: '#374151'
+                                                    }}
+                                                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                                                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                >
+                                                    {typeof major === 'string' ? major : major.name || major.value}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
                                 )}
                             </div>
-                        )}
-                    </div>
-                </div>
-            </section>
-
-            {/* 3. Results Area */}
-            {search && (
-                <section className="container max-w-4xl mb-20 animate-fade-in">
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">
-                        {results.length} Result{results.length !== 1 && 's'} Found
-                    </h3>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {results.map((item, idx) => (
-                            item.type === 'course' ? (
-                                <CourseCard
-                                    key={item.data.id}
-                                    course={item.data}
-                                    saved={savedCourses.has(item.data.id)}
-                                    onToggleSave={(e) => toggleSave(e, item.data.id)}
-                                    onClick={() => setSelectedItem(item.data)}
-                                />
-                            ) : (
-                                <ProfCard
-                                    key={item.data.id}
-                                    prof={item.data}
-                                    onClick={() => {
-                                        // Find related course to show insights for
-                                        const relatedCourse = COURSES.find(c => c.id === item.data.courseId);
-                                        if (relatedCourse) setSelectedItem(relatedCourse);
-                                    }}
-                                />
-                            )
-                        ))}
-                        {results.length === 0 && (
-                            <div className="col-span-full py-12 text-center text-gray-400">
-                                No results found. Try "CMPT", "Math", or "Smith".
-                            </div>
-                        )}
-                    </div>
-                </section>
-            )}
-
-            {/* 4. Default Homepage Content (if no search) */}
-            {!search && (
-                <section className="container max-w-4xl">
-                    <div className="grid md:grid-cols-2 gap-8">
-                        <div>
-                            <h3 className="flex items-center gap-2 font-bold text-gray-800 mb-4">
-                                <Zap size={18} className="text-amber-500" /> Popular this term
-                            </h3>
-                            <div className="flex flex-wrap gap-2">
-                                {COURSES.map(c => (
-                                    <div key={c.id} onClick={() => setSelectedItem(c)} className="bg-white border hover:border-red-300 cursor-pointer px-3 py-2 rounded-md shadow-sm text-sm font-medium text-gray-700">
-                                        {c.code}
-                                    </div>
-                                ))}
-                            </div>
                         </div>
+                    </section>
 
-                        <div>
-                            <h3 className="flex items-center gap-2 font-bold text-gray-800 mb-4">
-                                <ShieldCheck size={18} className="text-emerald-500" /> Top Contributors
+                    {/* 3. Results Area */}
+                    {search && (
+                        <section className="container max-w-4xl mb-20 animate-fade-in">
+                            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">
+                                {results.length} Result{results.length !== 1 && 's'} Found
                             </h3>
-                            <div className="space-y-3">
-                                {[1, 2, 3].map(i => (
-                                    <div key={i} className="flex items-center gap-3 text-sm text-gray-600">
-                                        <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold">U{i}</div>
-                                        <span>Contributed 3 resources to CMPT 225</span>
-                                    </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {results.map((item, idx) => (
+                                    item.type === 'course' ? (
+                                        <CourseCard
+                                            key={item.data.id}
+                                            course={item.data}
+                                            saved={savedCourses.has(item.data.id)}
+                                            onToggleSave={(e) => toggleSave(e, item.data.id)}
+                                            onClick={() => setSelectedItem(item.data)}
+                                        />
+                                    ) : (
+                                        <ProfCard
+                                            key={item.data.id}
+                                            prof={item.data}
+                                            onClick={() => {
+                                                // Find related course to show insights for
+                                                const relatedCourse = COURSES.find(c => c.id === item.data.courseId);
+                                                if (relatedCourse) setSelectedItem(relatedCourse);
+                                            }}
+                                        />
+                                    )
                                 ))}
+                                {results.length === 0 && (
+                                    <div className="col-span-full py-12 text-center text-gray-400">
+                                        No results found. Try "CMPT", "Math", or "Smith".
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    </div>
-                </section>
-            )}
+                        </section>
+                    )}
 
-            {/* Footer */}
-            <footer className="mt-20 py-8 border-t border-gray-200 text-center text-gray-400 text-sm">
-                <p>Built for SFU Students. Crowdsourced insights; not official SFU.</p>
-            </footer>
-
-            {/* 5. Insights Panel (Modal) */}
-            {selectedItem && (
-                <div className="modal-overlay" onClick={() => setSelectedItem(null)}>
-                    <div className="modal-content relative" onClick={e => e.stopPropagation()}>
-                        <button
-                            onClick={() => setSelectedItem(null)}
-                            className="absolute right-4 top-4 p-1 hover:bg-gray-100 rounded-full text-gray-500"
-                        >
-                            <X size={24} />
-                        </button>
-
-                        {/* Modal Header */}
-                        <div className="p-6 md:p-8 border-b border-gray-100 bg-gray-50">
-                            <div className="flex items-start justify-between mb-2">
+                    {/* 4. Default Homepage Content (if no search) */}
+                    {!search && (
+                        <section className="container max-w-4xl">
+                            <div className="grid md:grid-cols-2 gap-8">
                                 <div>
-                                    <h2 className="text-3xl font-bold text-gray-900">{selectedItem.code}</h2>
-                                    <h3 className="text-lg text-gray-600">{selectedItem.title}</h3>
-                                </div>
-                                <div className={`px-3 py-1 rounded-full text-sm font-bold ${getLevelColor(selectedItem.metrics.difficulty)
-                                    }`}>
-                                    Difficulty: {selectedItem.metrics.difficulty}/5
-                                </div>
-                            </div>
-                            <p className="text-gray-500 text-sm mb-4 leading-relaxed">{selectedItem.description}</p>
-
-                            <div className="flex gap-4 text-sm text-gray-600">
-                                <div className="flex items-center gap-1.5"><CheckCircle size={16} className="text-green-600" /> {selectedItem.term}</div>
-                                <div className="flex items-center gap-1.5"><User size={16} /> {selectedItem.metrics.n} Reviews</div>
-                            </div>
-                        </div>
-
-                        {/* Unlocked Content */}
-                        <div className="p-6 md:p-8 grid md:grid-cols-2 gap-8">
-
-                            {/* Left Column: Stats */}
-                            <div className="space-y-6">
-                                <StatBar label="Avg Workload" value={`${selectedItem.metrics.workload} h/week`} percent={selectedItem.metrics.workload * 5} color="bg-blue-500" />
-                                <StatBar label="Fairness" value={selectedItem.metrics.fairness} percent={(selectedItem.metrics.fairness / 5) * 100} color="bg-emerald-500" />
-                                <StatBar label="Clarity" value={selectedItem.metrics.clarity} percent={(selectedItem.metrics.clarity / 5) * 100} color="bg-purple-500" />
-
-                                <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
-                                    <h4 className="font-bold text-orange-900 text-sm mb-2">Assessment</h4>
+                                    <h3 className="flex items-center gap-2 font-bold text-gray-800 mb-4">
+                                        <Zap size={18} className="text-amber-500" /> Popular this term
+                                    </h3>
                                     <div className="flex flex-wrap gap-2">
-                                        {selectedItem.assessment.map(a => (
-                                            <span key={a} className="bg-white px-2 py-1 rounded text-xs font-medium text-orange-800 border border-orange-100 shadow-sm">{a}</span>
+                                        {COURSES.map(c => (
+                                            <div key={c.id} onClick={() => setSelectedItem(c)} className="bg-white border hover:border-red-300 cursor-pointer px-3 py-2 rounded-md shadow-sm text-sm font-medium text-gray-700">
+                                                {c.code}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h3 className="flex items-center gap-2 font-bold text-gray-800 mb-4">
+                                        <ShieldCheck size={18} className="text-emerald-500" /> Top Contributors
+                                    </h3>
+                                    <div className="space-y-3">
+                                        {[1, 2, 3].map(i => (
+                                            <div key={i} className="flex items-center gap-3 text-sm text-gray-600">
+                                                <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold">U{i}</div>
+                                                <span>Contributed 3 resources to CMPT 225</span>
+                                            </div>
                                         ))}
                                     </div>
                                 </div>
                             </div>
+                        </section>
+                    )}
 
-                            {/* Right Column: Protected Content */}
-                            <div className="relative">
+                    {/* Footer */}
+                    <footer className="mt-20 py-8 border-t border-gray-200 text-center text-gray-400 text-sm">
+                        <p>Built for SFU Students. Crowdsourced insights; not official SFU.</p>
+                    </footer>
 
-                                {/* Content Logic */}
-                                <div className={!hasContributed ? 'blur-content opacity-50' : ''}>
-                                    <div className="mb-6">
-                                        <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                                            <MessageSquare size={18} /> Crowd Tips
-                                        </h4>
-                                        <ul className="space-y-3">
-                                            {selectedItem.tips.map((tip, i) => (
-                                                <li key={i} className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md border border-gray-100">
-                                                    "{tip}"
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
+                    {/* 5. Insights Panel (Modal) */}
+                    {selectedItem && (
+                        <div className="modal-overlay" onClick={() => setSelectedItem(null)}>
+                            <div className="modal-content relative" onClick={e => e.stopPropagation()}>
+                                <button
+                                    onClick={() => setSelectedItem(null)}
+                                    className="absolute right-4 top-4 p-1 hover:bg-gray-100 rounded-full text-gray-500"
+                                >
+                                    <X size={24} />
+                                </button>
 
-                                    <div>
-                                        <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                                            <BookOpen size={18} /> Top Resources
-                                        </h4>
-                                        <div className="space-y-3">
-                                            {selectedItem.resources.map((r, i) => (
-                                                <div key={i} className="flex items-start justify-between p-3 rounded-md border border-gray-100 hover:border-red-200 transition bg-white">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className="text-xs font-bold uppercase text-red-600 bg-red-50 px-1.5 rounded">{r.type}</span>
-                                                            <a href="#" className="text-sm font-medium text-gray-900 hover:underline">{r.title}</a>
-                                                        </div>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => incrementVote(r.id)}
-                                                        className="flex flex-col items-center ml-3 text-gray-400 hover:text-green-600"
-                                                    >
-                                                        <ThumbsUp size={16} />
-                                                        <span className="text-xs font-bold mt-1">{(r.votes || 0) + (resourceVotes[r.id] || 0)}</span>
-                                                    </button>
-                                                </div>
-                                            ))}
+                                {/* Modal Header */}
+                                <div className="p-6 md:p-8 border-b border-gray-100 bg-gray-50">
+                                    <div className="flex items-start justify-between mb-2">
+                                        <div>
+                                            <h2 className="text-3xl font-bold text-gray-900">{selectedItem.code}</h2>
+                                            <h3 className="text-lg text-gray-600">{selectedItem.title}</h3>
                                         </div>
+                                        <div className={`px-3 py-1 rounded-full text-sm font-bold ${getLevelColor(selectedItem.metrics.difficulty)
+                                            }`}>
+                                            Difficulty: {selectedItem.metrics.difficulty}/5
+                                        </div>
+                                    </div>
+                                    <p className="text-gray-500 text-sm mb-4 leading-relaxed">{selectedItem.description}</p>
+
+                                    <div className="flex gap-4 text-sm text-gray-600">
+                                        <div className="flex items-center gap-1.5"><CheckCircle size={16} className="text-green-600" /> {selectedItem.term}</div>
+                                        <div className="flex items-center gap-1.5"><User size={16} /> {selectedItem.metrics.n} Reviews</div>
                                     </div>
                                 </div>
 
-                                {/* Gate Overlay */}
-                                {!hasContributed && (
-                                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-6">
-                                        <div className="bg-white/90 backdrop-blur-md p-6 rounded-xl shadow-xl border border-gray-200 max-w-sm">
-                                            <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                <Lock size={24} />
+                                {/* Unlocked Content */}
+                                <div className="p-6 md:p-8 grid md:grid-cols-2 gap-8">
+
+                                    {/* Left Column: Stats */}
+                                    <div className="space-y-6">
+                                        <StatBar label="Avg Workload" value={`${selectedItem.metrics.workload} h/week`} percent={selectedItem.metrics.workload * 5} color="bg-blue-500" />
+                                        <StatBar label="Fairness" value={selectedItem.metrics.fairness} percent={(selectedItem.metrics.fairness / 5) * 100} color="bg-emerald-500" />
+                                        <StatBar label="Clarity" value={selectedItem.metrics.clarity} percent={(selectedItem.metrics.clarity / 5) * 100} color="bg-purple-500" />
+
+                                        <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
+                                            <h4 className="font-bold text-orange-900 text-sm mb-2">Assessment</h4>
+                                            <div className="flex flex-wrap gap-2">
+                                                {selectedItem.assessment.map(a => (
+                                                    <span key={a} className="bg-white px-2 py-1 rounded text-xs font-medium text-orange-800 border border-orange-100 shadow-sm">{a}</span>
+                                                ))}
                                             </div>
-                                            <h4 className="text-lg font-bold text-gray-900 mb-2">Unlock Full Insights</h4>
-                                            <p className="text-sm text-gray-600 mb-4">
-                                                Contribute just <b>one review</b> to see full topic maps, exam tips, and resource libraries.
-                                            </p>
-                                            <button
-                                                onClick={() => setShowContributionForm(true)}
-                                                className="btn btn-primary w-full shadow-lg"
-                                            >
-                                                Write a 60-second review
-                                            </button>
                                         </div>
+                                    </div>
+
+                                    {/* Right Column: Protected Content */}
+                                    <div className="relative">
+
+                                        {/* Content Logic */}
+                                        <div className={!hasContributed ? 'blur-content opacity-50' : ''}>
+                                            <div className="mb-6">
+                                                <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                                    <MessageSquare size={18} /> Crowd Tips
+                                                </h4>
+                                                <ul className="space-y-3">
+                                                    {selectedItem.tips.map((tip, i) => (
+                                                        <li key={i} className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md border border-gray-100">
+                                                            "{tip}"
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+
+                                            <div>
+                                                <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                                    <BookOpen size={18} /> Top Resources
+                                                </h4>
+                                                <div className="space-y-3">
+                                                    {selectedItem.resources.map((r, i) => (
+                                                        <div key={i} className="flex items-start justify-between p-3 rounded-md border border-gray-100 hover:border-red-200 transition bg-white">
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <span className="text-xs font-bold uppercase text-red-600 bg-red-50 px-1.5 rounded">{r.type}</span>
+                                                                    <a href="#" className="text-sm font-medium text-gray-900 hover:underline">{r.title}</a>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => incrementVote(r.id)}
+                                                                className="flex flex-col items-center ml-3 text-gray-400 hover:text-green-600"
+                                                            >
+                                                                <ThumbsUp size={16} />
+                                                                <span className="text-xs font-bold mt-1">{(r.votes || 0) + (resourceVotes[r.id] || 0)}</span>
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Gate Overlay */}
+                                        {!hasContributed && (
+                                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-6">
+                                                <div className="bg-white/90 backdrop-blur-md p-6 rounded-xl shadow-xl border border-gray-200 max-w-sm">
+                                                    <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                        <Lock size={24} />
+                                                    </div>
+                                                    <h4 className="text-lg font-bold text-gray-900 mb-2">Unlock Full Insights</h4>
+                                                    <p className="text-sm text-gray-600 mb-4">
+                                                        Contribute just <b>one review</b> to see full topic maps, exam tips, and resource libraries.
+                                                    </p>
+                                                    <button
+                                                        onClick={() => setShowContributionForm(true)}
+                                                        className="btn btn-primary w-full shadow-lg"
+                                                    >
+                                                        Write a 60-second review
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {!hasContributed && (
+                                    <div className="bg-amber-50 p-3 text-center text-xs font-medium text-amber-800 border-t border-amber-100 rounded-b-lg">
+                                        <span className="font-bold">2,402 students</span> unlocked insights this week.
                                     </div>
                                 )}
                             </div>
                         </div>
+                    )}
 
-                        {!hasContributed && (
-                            <div className="bg-amber-50 p-3 text-center text-xs font-medium text-amber-800 border-t border-amber-100 rounded-b-lg">
-                                <span className="font-bold">2,402 students</span> unlocked insights this week.
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
+                    {/* 6. Contribution Form (Modal) */}
+                    {showContributionForm && (
+                        <div className="modal-overlay">
+                            <form onSubmit={handleCreateReview} className="modal-content max-w-lg p-6 animate-fade-in relative">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowContributionForm(false)}
+                                    className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
+                                >
+                                    <X size={20} />
+                                </button>
 
-            {/* 6. Contribution Form (Modal) */}
-            {showContributionForm && (
-                <div className="modal-overlay">
-                    <form onSubmit={handleCreateReview} className="modal-content max-w-lg p-6 animate-fade-in relative">
-                        <button
-                            type="button"
-                            onClick={() => setShowContributionForm(false)}
-                            className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
-                        >
-                            <X size={20} />
-                        </button>
+                                <h2 className="text-xl font-bold mb-1">Contribute Insight</h2>
+                                <p className="text-gray-500 text-sm mb-6">Help your peers by reviewing a course you took.</p>
 
-                        <h2 className="text-xl font-bold mb-1">Contribute Insight</h2>
-                        <p className="text-gray-500 text-sm mb-6">Help your peers by reviewing a course you took.</p>
+                                <div className="space-y-4 mb-6">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Course Code</label>
+                                        <input required type="text" placeholder="e.g. CMPT 120" className="w-full p-2 border border-gray-300 rounded-md focus:border-red-500 outline-none" />
+                                    </div>
 
-                        <div className="space-y-4 mb-6">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Course Code</label>
-                                <input required type="text" placeholder="e.g. CMPT 120" className="w-full p-2 border border-gray-300 rounded-md focus:border-red-500 outline-none" />
-                            </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Difficulty (1-5)</label>
+                                            <input type="range" min="1" max="5" defaultValue="3" className="w-full accent-red-600" />
+                                            <div className="flex justify-between text-xs text-gray-400"><span>Easy</span><span>Hard</span></div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Workload (hrs/wk)</label>
+                                            <input type="number" min="0" max="40" defaultValue="5" className="w-full p-2 border border-gray-300 rounded-md" />
+                                        </div>
+                                    </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Difficulty (1-5)</label>
-                                    <input type="range" min="1" max="5" defaultValue="3" className="w-full accent-red-600" />
-                                    <div className="flex justify-between text-xs text-gray-400"><span>Easy</span><span>Hard</span></div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">One Tip (Optional)</label>
+                                        <textarea rows="2" placeholder="e.g. Focus on chapter 4..." className="w-full p-2 border border-gray-300 rounded-md outline-none text-sm"></textarea>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Workload (hrs/wk)</label>
-                                    <input type="number" min="0" max="40" defaultValue="5" className="w-full p-2 border border-gray-300 rounded-md" />
+
+                                <div className="flex justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowContributionForm(false)}
+                                        className="btn btn-ghost"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button type="submit" className="btn btn-primary">
+                                        Submit Review
+                                    </button>
                                 </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">One Tip (Optional)</label>
-                                <textarea rows="2" placeholder="e.g. Focus on chapter 4..." className="w-full p-2 border border-gray-300 rounded-md outline-none text-sm"></textarea>
-                            </div>
+                            </form>
                         </div>
+                    )}
 
-                        <div className="flex justify-end gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setShowContributionForm(false)}
-                                className="btn btn-ghost"
-                            >
-                                Cancel
-                            </button>
-                            <button type="submit" className="btn btn-primary">
-                                Submit Review
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                </>
             )}
 
         </div>
