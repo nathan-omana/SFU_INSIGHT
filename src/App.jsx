@@ -1427,9 +1427,9 @@ function App() {
                                             )}
 
                                             {/* Success Guide CTA */}
-                                            <div className="bg-gradient-to-r from-red-50 to-white p-5 rounded-xl border border-red-100">
-                                                <h4 className="font-bold text-gray-900 mb-2">PATH TO SUCCESS</h4>
-                                                <p className="text-sm text-gray-600 mb-4">
+                                            <div style={{ background: 'linear-gradient(to right, #fef2f2, white)', padding: '24px', borderRadius: '12px', border: '1px solid #fecaca' }}>
+                                                <h4 style={{ fontWeight: 'bold', color: '#111827', marginBottom: '8px', fontSize: '18px' }}>PATH TO SUCCESS</h4>
+                                                <p style={{ fontSize: '14px', color: '#4b5563', marginBottom: '20px' }}>
                                                     Access community notes, video tutorials, and past syllabi for <b>{selectedItem.code}</b>.
                                                 </p>
                                                 <button
@@ -1437,10 +1437,38 @@ function App() {
                                                         setSelectedItem(selectedItem);
                                                         setCurrentView('success-guide');
                                                     }}
-                                                    className="w-full flex items-center justify-center gap-3 py-3.5 bg-[#a6192e] hover:bg-[#8a1526] text-white rounded-lg font-bold shadow-md hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5"
+                                                    style={{
+                                                        width: '100%',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '12px',
+                                                        padding: '20px 32px',
+                                                        backgroundColor: '#a6192e',
+                                                        color: 'white',
+                                                        borderRadius: '12px',
+                                                        fontWeight: 'bold',
+                                                        fontSize: '18px',
+                                                        border: '4px solid #8a1526',
+                                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.3s ease'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.backgroundColor = '#c42a3d';
+                                                        e.currentTarget.style.borderColor = '#a6192e';
+                                                        e.currentTarget.style.transform = 'translateY(-4px)';
+                                                        e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(166, 25, 46, 0.3)';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.backgroundColor = '#a6192e';
+                                                        e.currentTarget.style.borderColor = '#8a1526';
+                                                        e.currentTarget.style.transform = 'translateY(0)';
+                                                        e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1)';
+                                                    }}
                                                 >
-                                                    <span>PATH TO SUCCESS IN {selectedItem.code.split(' ')[0]}</span>
-                                                    <ArrowRight size={18} />
+                                                    <span>PATH TO SUCCESS IN {selectedItem.code}</span>
+                                                    <ArrowRight size={22} />
                                                 </button>
                                             </div>
                                         </div>
