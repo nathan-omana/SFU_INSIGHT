@@ -297,13 +297,13 @@ function App() {
                         className="flex items-center gap-4 cursor-pointer"
                         onClick={() => { setSearch(''); setSelectedItem(null); setCurrentView('home'); }}
                     >
-                        <div style={{ backgroundColor: 'rgba(255,255,255,0.15)', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.25)' }}>
+                        <div style={{ padding: '0.75rem' }}>
                             <BookOpen size={36} strokeWidth={2.5} color="white" />
                         </div>
                         <span
-                            style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.3)', padding: '0.25rem 0.75rem', borderRadius: '8px', transition: 'all 0.2s' }}
-                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'}
-                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.3)', transition: 'all 0.2s' }}
+                            onMouseOver={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.textShadow = '0 4px 12px rgba(255,255,255,0.3)'; }}
+                            onMouseOut={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.textShadow = '0 2px 4px rgba(0,0,0,0.3)'; }}
                         >SFU Insight</span>
                     </div>
 
