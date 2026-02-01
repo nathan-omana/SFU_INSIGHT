@@ -5,6 +5,9 @@ import {
     CheckCircle, Zap, ShieldCheck
 } from 'lucide-react';
 
+import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
+
+
 // --- MOCK DATA ---
 
 const COURSES = [
@@ -153,29 +156,52 @@ function App() {
         <div className="min-h-screen pb-20">
 
             {/* 1. Header */}
-            <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-gray-200">
-                <div className="w-full px-6 h-16 flex items-center justify-between">
+            <header className="sticky top-0 z-40 bg-red-600 text-white shadow-md border-b border-red-700">
+                <div className="container h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setSearch(''); setSelectedItem(null); }}>
-                        <div className="bg-blue-600 text-white p-1.5 rounded-md">
+                        <div className="bg-white text-red-600 p-1.5 rounded-md shadow-sm">
                             <Zap size={20} fill="currentColor" />
                         </div>
-                        <span className="font-bold text-xl tracking-tight">SFU Insight</span>
+                        <span className="font-bold text-xl tracking-tight text-white">SFU Course Insight</span>
                     </div>
 
-                    <nav className="flex flex-row items-center gap-3">
-                        <button className="flex items-center gap-2 px-6 py-3 text-base font-semibold text-gray-700 bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-md transition-all duration-200 hover:shadow-md">
-                            <Search size={20} />
-                            <span>Search</span>
+                    <div className="hidden md:flex items-center gap-4">
+                        {!hasContributed && (
+                            <span className="text-xs font-medium text-white bg-white-10 px-3 py-1 rounded-full border border-white-20 flex items-center gap-1">
+                                <Lock size={12} /> Contribute 1 review to unlock deeper insights
+                            </span>
+                        )}
+                        <button className="flex items-center gap-1.5 text-sm font-medium text-red-100 hover:text-white hover:bg-white-10 px-3 py-2 rounded-md transition">
+                            <Bookmark size={18} />
+                            <span>My Courses ({savedCourses.size})</span>
                         </button>
-                        <button className="flex items-center gap-2.5 px-6 py-3 text-base font-semibold text-gray-700 bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-md transition-all duration-200 hover:shadow-md">
-                            <Bookmark size={20} />
-                            <span>Explore</span>
+
+                        {/* Clerk Authentication */}
+                        <SignedOut>
+                            <SignInButton mode="modal">
+                                <button className="flex items-center gap-1.5 text-sm font-medium text-red-100 hover:text-white hover:bg-white-10 px-3 py-2 rounded-md transition">
+                                    <User size={18} />
+                                    <span>Login</span>
+                                </button>
+                            </SignInButton>
+                        </SignedOut>
+                        <SignedIn>
+                            <div className="flex items-center gap-1.5 px-3 py-2">
+                                <UserButton afterSignOutUrl="/" appearance={{
+                                    elements: {
+                                        avatarBox: "w-8 h-8 ring-2 ring-white/50"
+                                    }
+                                }} />
+                            </div>
+                        </SignedIn>
+
+                        <button
+                            onClick={() => setShowContributionForm(true)}
+                            className="bg-white text-red-600 hover:bg-gray-50 px-4 py-2 rounded-md font-medium text-sm shadow-sm transition-colors"
+                        >
+                            Contribute
                         </button>
-                        <button className="flex items-center gap-2.5 px-6 py-3 text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-all duration-200 shadow-md hover:shadow-lg">
-                            <User size={20} />
-                            <span>Login</span>
-                        </button>
-                    </nav>
+                    </div>
                 </div>
             </header>
 
