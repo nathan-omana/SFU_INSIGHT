@@ -116,8 +116,24 @@ function App() {
     const [majorCourses, setMajorCourses] = useState([]);
     const [loadingCourses, setLoadingCourses] = useState(false);
     const [currentView, setCurrentView] = useState('home'); // 'home' or 'scheduler'
-    const [searchResults, setSearchResults] = useState([]);
+    const [searchResults, setSearchResults] = useState([]); // Kept for flat list compatibility if needed
+    const [groupedResults, setGroupedResults] = useState([]); // New grouped structure
     const [searchLoading, setSearchLoading] = useState(false);
+    const [courseCache, setCourseCache] = useState({}); // Cache courses by department
+    const [showSuggestions, setShowSuggestions] = useState(false);
+
+    // Filter departments for autocomplete suggestions
+    // Simplified department filtering - just returns matching depts for internal use
+    const filteredMajors = useMemo(() => {
+        if (!search.trim()) return [];
+        const query = search.trim().toUpperCase();
+        const letters = query.match(/[A-Z]+/)?.[0] || '';
+        if (!letters) return [];
+        return majors.filter(m => {
+            const deptCode = (m.text || m.value || m).toUpperCase();
+            return deptCode.startsWith(letters);
+        });
+    }, [search, majors]);
 
     // Fetch departments (majors) on component mount - using same API as Scheduler
     useEffect(() => {
@@ -174,9 +190,12 @@ function App() {
     }, [selectedMajor]);
 
     // Search Logic - fetch from API based on search input
+    // Search Logic - fetch from API based on search input
     useEffect(() => {
+        // Clear results if search is empty
         if (!search.trim()) {
             setSearchResults([]);
+            setGroupedResults([]);
             return;
         }
 
@@ -189,59 +208,115 @@ function App() {
         // Need at least 1 letter to search
         if (letters.length < 1) {
             setSearchResults([]);
+            setGroupedResults([]);
             return;
         }
 
-        const dept = letters.toLowerCase();
+        // Find all matching departments
+        const matchingDepts = majors.filter(m => {
+            const deptCode = (m.text || m.value || m).toUpperCase();
+            return deptCode.startsWith(letters);
+        }).slice(0, 5); // Limit to top 5 matching departments
 
-        const timer = setTimeout(async () => {
+        if (matchingDepts.length === 0) {
+            setSearchResults([]);
+            setGroupedResults([]);
+            return;
+        }
+
+        const fetchGroupedCourses = async () => {
             setSearchLoading(true);
             try {
-                // Fetch courses from the department
-                const courses = await getCourses('2025', 'spring', dept);
+                // Fetch courses for all matching departments in parallel
+                const promises = matchingDepts.map(async (major) => {
+                    const deptCode = (major.text || major.value || major).toLowerCase();
+                    const deptName = major.name || deptCode.toUpperCase();
 
-                if (Array.isArray(courses)) {
-                    let filtered = courses;
+                    // Check cache first
+                    if (courseCache[deptCode]) {
+                        return { dept: deptCode, name: deptName, courses: courseCache[deptCode] };
+                    }
 
-                    // If course number typed, filter courses that start with those digits
+                    // Fetch if not cached
+                    try {
+                        const courses = await getCourses('2025', 'spring', deptCode);
+                        if (Array.isArray(courses)) {
+                            // Update cache locally for this execution context
+                            // We can't rely on setState being immediate for the next iteration
+                            return { dept: deptCode, name: deptName, courses };
+                        }
+                    } catch (e) {
+                        console.error(`Failed to fetch ${deptCode}`, e);
+                    }
+                    return null;
+                });
+
+                const results = await Promise.all(promises);
+
+                // Filter valid results and update cache
+                const newCache = {};
+                const validGroups = results.filter(r => r && Array.isArray(r.courses) && r.courses.length > 0);
+
+                validGroups.forEach(g => {
+                    if (!courseCache[g.dept]) {
+                        newCache[g.dept] = g.courses;
+                    }
+                });
+
+                if (Object.keys(newCache).length > 0) {
+                    setCourseCache(prev => ({ ...prev, ...newCache }));
+                }
+
+                // Filter courses by number if provided
+                const grouped = validGroups.map(group => {
+                    let filtered = group.courses;
                     if (numbers) {
-                        filtered = courses.filter(c =>
+                        filtered = group.courses.filter(c =>
                             (c.value && c.value.startsWith(numbers)) ||
                             (c.text && c.text.startsWith(numbers))
                         );
                     }
 
-                    // Transform to result format
-                    const results = filtered.slice(0, 20).map(c => ({
-                        type: 'course',
-                        data: {
-                            id: `${dept}-${c.value}`,
-                            code: `${dept.toUpperCase()} ${c.value}`,
-                            title: c.title || 'Course',
-                            term: 'Spring 2025',
-                            description: `${dept.toUpperCase()} ${c.value} - ${c.title || 'Course details'}`,
-                            dept: dept,
-                            courseNum: c.value,
-                            metrics: { difficulty: 3.5, workload: 8, fairness: 4.0, clarity: 4.0, n: 0 },
-                            assessment: [],
-                            tips: [],
-                            resources: []
-                        }
-                    }));
-                    setSearchResults(results);
-                } else {
-                    setSearchResults([]);
-                }
+                    return {
+                        dept: group.dept,
+                        name: group.name,
+                        courses: filtered.slice(0, 10).map(c => ({
+                            type: 'course',
+                            data: {
+                                id: `${group.dept}-${c.value}`,
+                                code: `${group.dept.toUpperCase()} ${c.value}`,
+                                title: c.title || 'Course',
+                                term: 'Spring 2025',
+                                description: `${group.dept.toUpperCase()} ${c.value} - ${c.title || 'Course details'}`,
+                                dept: group.dept,
+                                courseNum: c.value,
+                                metrics: { difficulty: 3.5, workload: 8, fairness: 4.0, clarity: 4.0, n: 0 },
+                                assessment: [],
+                                tips: [],
+                                resources: []
+                            }
+                        }))
+                    };
+                }).filter(group => group.courses.length > 0);
+
+                setGroupedResults(grouped);
+
+                // Also flatten for legacy compatibility
+                const flat = grouped.flatMap(g => g.courses);
+                setSearchResults(flat);
+
             } catch (error) {
                 console.error('Search failed:', error);
                 setSearchResults([]);
+                setGroupedResults([]);
             } finally {
                 setSearchLoading(false);
             }
-        }, 200); // Debounce 200ms for faster response
+        };
 
+        const timer = setTimeout(fetchGroupedCourses, 300);
         return () => clearTimeout(timer);
-    }, [search]);
+    }, [search, majors, courseCache]);
 
     // Filter results by active tab
     const results = useMemo(() => {
@@ -340,14 +415,83 @@ function App() {
                         , real difficulty, instructor vibeWorkloads, topic maps, and best resources—powered by students like you.
                     </p> */}
 
-                            <div className="max-w-2xl mx-auto mb-8">
+                            <div className="max-w-2xl mx-auto mb-8" style={{ position: 'relative' }}>
                                 <input
                                     type="text"
-                                    placeholder="Course code, title, description, or professor name..." className="search-input"
+                                    placeholder="Search departments (e.g., CMPT, BUS, MATH)..."
+                                    className="search-input"
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
+                                    onFocus={() => setShowSuggestions(true)}
+                                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                                     autoFocus
                                 />
+
+                                {/* Autocomplete Dropdown - Grouped by Faculty */}
+                                {showSuggestions && (groupedResults.length > 0) && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '100%',
+                                        left: 0,
+                                        right: 0,
+                                        marginTop: '0.5rem',
+                                        backgroundColor: 'white',
+                                        border: '1px solid #e5e7eb',
+                                        borderRadius: '12px',
+                                        boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                                        overflowY: 'auto',
+                                        maxHeight: '400px',
+                                        zIndex: 100
+                                    }}>
+                                        {groupedResults.map((group) => (
+                                            <div key={group.dept}>
+                                                {/* Faculty/Dept Header */}
+                                                <div style={{
+                                                    padding: '0.75rem 1.25rem',
+                                                    backgroundColor: '#f9fafb',
+                                                    borderBottom: '1px solid #f3f4f6',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    position: 'sticky',
+                                                    top: 0
+                                                }}>
+                                                    <span style={{ fontWeight: '700', color: '#a6192e', fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                        {group.name} ({group.dept.toUpperCase()})
+                                                    </span>
+                                                </div>
+
+                                                {/* Courses List */}
+                                                {group.courses.map((result) => (
+                                                    <div
+                                                        key={result.data.id}
+                                                        onClick={() => {
+                                                            setSelectedItem(result.data);
+                                                            setShowSuggestions(false);
+                                                        }}
+                                                        style={{
+                                                            padding: '0.75rem 1.25rem',
+                                                            cursor: 'pointer',
+                                                            borderBottom: '1px solid #f3f4f6',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '0.75rem'
+                                                        }}
+                                                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
+                                                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                                                    >
+                                                        <span style={{ fontWeight: '600', color: '#1f2937', fontSize: '0.9375rem', minWidth: '80px' }}>
+                                                            {result.data.code}
+                                                        </span>
+                                                        <span style={{ fontSize: '0.875rem', color: '#4b5563', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                            {result.data.title}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex items-center justify-center gap-3">
@@ -503,8 +647,8 @@ function App() {
                         </div>
                     </section>
 
-                    {/* 3. Results Area */}
-                    {search && (
+                    {/* 3. Results Area - Hide when searching via dropdown, or show if they hit enter/selected something */}
+                    {search && !showSuggestions && (
                         <section className="container max-w-4xl mb-20 animate-fade-in">
                             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 ml-1">
                                 {searchLoading ? 'Searching...' : `${results.length} Result${results.length !== 1 ? 's' : ''} Found`}
