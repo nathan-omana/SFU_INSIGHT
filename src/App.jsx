@@ -293,7 +293,13 @@ function App() {
             {/* Header */}
             <header style={{ position: 'sticky', top: 0, zIndex: 40, backgroundColor: '#5c0a1f', borderBottom: '2px solid #3d0614', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
                 <div className="w-full px-8 h-24 flex items-center justify-between">
-                    <div className="flex items-center gap-4 cursor-pointer" onClick={() => { setSearch(''); setSelectedItem(null); setCurrentView('home'); }}>
+                    <div
+                        className="flex items-center gap-4 cursor-pointer"
+                        onClick={() => { setSearch(''); setSelectedItem(null); setCurrentView('home'); }}
+                        style={{ padding: '0.5rem 1rem', borderRadius: '12px', transition: 'all 0.2s' }}
+                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'}
+                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
                         <div style={{ backgroundColor: 'rgba(255,255,255,0.15)', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.25)' }}>
                             <BookOpen size={36} strokeWidth={2.5} color="white" />
                         </div>
