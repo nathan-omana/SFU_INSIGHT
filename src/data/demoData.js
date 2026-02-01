@@ -72,31 +72,31 @@ export const CMPT_225_DATA = {
                 title: 'Pointers & Memory Management Explained',
                 description: 'Visual guide to C++ pointers, references, and dynamic memory. Includes common segfault causes.',
                 tags: ['Must-Read', 'C++ Fundamentals'],
-                upvotes: 234
+                upvotes: 4
             },
             {
                 title: 'Recursion Patterns Cheatsheet',
                 description: 'Common recursion patterns with examples: factorial, fibonacci, tree traversals, divide & conquer.',
                 tags: ['Exam-Heavy', 'Quick Reference'],
-                upvotes: 189
+                upvotes: 2
             },
             {
                 title: 'Big-O Analysis Made Simple',
                 description: 'How to analyze time and space complexity. Includes practice problems with solutions.',
                 tags: ['Conceptual', 'Final Exam'],
-                upvotes: 156
+                upvotes: 3
             },
             {
                 title: 'Tree Traversal Visualizations',
                 description: 'Step-by-step animations for inorder, preorder, postorder, and level-order traversals.',
                 tags: ['Visual Guide', 'Midterm'],
-                upvotes: 143
+                upvotes: 4
             },
             {
                 title: 'Hash Tables Deep Dive',
                 description: 'Collision resolution strategies, load factors, and when to use which approach.',
                 tags: ['Advanced', 'Final Exam'],
-                upvotes: 98
+                upvotes: 0
             }
         ],
 

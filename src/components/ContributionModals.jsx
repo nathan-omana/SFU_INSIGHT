@@ -294,18 +294,35 @@ export function UploadNotesModal({ isOpen, onClose, courseCode, onSuccess }) {
     );
 }
 
-// Share Tips Modal
+// Share Tips Modal - with category and intensity selectors
 export function ShareTipsModal({ isOpen, onClose, courseCode, onSuccess }) {
     const { user } = useUser();
     const { getToken } = useAuth();
     const [title, setTitle] = useState('');
     const [body, setBody] = useState('');
+    const [section, setSection] = useState(''); // notes | advice | matters
+    const [mattersIntensity, setMattersIntensity] = useState(''); // know_well | focus_heavily | dont_overinvest
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    const SECTIONS = [
+        { id: 'notes', label: 'Alumni Notes & Study Guides', emoji: '📚' },
+        { id: 'advice', label: 'Advice From Students', emoji: '💬' },
+        { id: 'matters', label: 'What Actually Matters', emoji: '🎯' }
+    ];
+
+    const INTENSITIES = [
+        { id: 'know_well', label: 'Know Well', color: '#10b981', bg: '#ecfdf5' },
+        { id: 'focus_heavily', label: 'Focus Heavily On', color: '#f59e0b', bg: '#fffbeb' },
+        { id: 'dont_overinvest', label: "Don't Over-Invest In", color: '#ef4444', bg: '#fef2f2' }
+    ];
+
+    const isValid = title.trim().length >= 3 && body.trim().length >= 15 && section &&
+        (section !== 'matters' || mattersIntensity);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!title.trim() || !body.trim()) return;
+        if (!isValid) return;
 
         setLoading(true);
         setError('');
@@ -317,6 +334,8 @@ export function ShareTipsModal({ isOpen, onClose, courseCode, onSuccess }) {
                 type: 'tip',
                 title: title.trim(),
                 body: body.trim(),
+                section,
+                mattersIntensity: section === 'matters' ? mattersIntensity : null,
                 displayName: user?.fullName || user?.username || 'Anonymous'
             }, token);
 
@@ -324,6 +343,8 @@ export function ShareTipsModal({ isOpen, onClose, courseCode, onSuccess }) {
             onClose();
             setTitle('');
             setBody('');
+            setSection('');
+            setMattersIntensity('');
         } catch (err) {
             setError(err.message);
         } finally {
@@ -334,14 +355,76 @@ export function ShareTipsModal({ isOpen, onClose, courseCode, onSuccess }) {
     return (
         <ModalWrapper isOpen={isOpen} onClose={onClose} title="Share a Tip" icon={MessageSquare}>
             <form onSubmit={handleSubmit}>
+                {/* Section Selector */}
+                <div style={{ marginBottom: '20px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '8px' }}>
+                        Where should this tip appear? <span style={{ color: '#ef4444' }}>*</span>
+                    </span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {SECTIONS.map(s => (
+                            <button
+                                key={s.id}
+                                type="button"
+                                onClick={() => { setSection(s.id); if (s.id !== 'matters') setMattersIntensity(''); }}
+                                style={{
+                                    padding: '10px 16px',
+                                    borderRadius: '24px',
+                                    border: section === s.id ? '2px solid #a6192e' : '2px solid #e5e7eb',
+                                    backgroundColor: section === s.id ? '#fef2f2' : 'white',
+                                    color: section === s.id ? '#a6192e' : '#4b5563',
+                                    fontWeight: '600',
+                                    fontSize: '13px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px'
+                                }}
+                            >
+                                <span>{s.emoji}</span> {s.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Intensity Selector - only for "matters" section */}
+                {section === 'matters' && (
+                    <div style={{ marginBottom: '20px' }}>
+                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '8px' }}>
+                            Priority Level <span style={{ color: '#ef4444' }}>*</span>
+                        </span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                            {INTENSITIES.map(i => (
+                                <button
+                                    key={i.id}
+                                    type="button"
+                                    onClick={() => setMattersIntensity(i.id)}
+                                    style={{
+                                        padding: '10px 16px',
+                                        borderRadius: '24px',
+                                        border: mattersIntensity === i.id ? `2px solid ${i.color}` : '2px solid #e5e7eb',
+                                        backgroundColor: mattersIntensity === i.id ? i.bg : 'white',
+                                        color: mattersIntensity === i.id ? i.color : '#4b5563',
+                                        fontWeight: '600',
+                                        fontSize: '13px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {i.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 <label style={{ display: 'block', marginBottom: '16px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>Title</span>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>Title <span style={{ color: '#ef4444' }}>*</span></span>
                     <input
                         type="text"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="e.g., Start assignments early"
-                        required
                         style={{
                             width: '100%',
                             padding: '12px 16px',
@@ -355,13 +438,226 @@ export function ShareTipsModal({ isOpen, onClose, courseCode, onSuccess }) {
                 </label>
 
                 <label style={{ display: 'block', marginBottom: '16px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>Your Tip</span>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+                        Your Tip <span style={{ color: '#ef4444' }}>*</span>
+                        <span style={{ fontWeight: '400', color: '#9ca3af', marginLeft: '8px' }}>
+                            ({body.length}/15 min)
+                        </span>
+                    </span>
                     <textarea
                         value={body}
                         onChange={(e) => setBody(e.target.value)}
                         placeholder="Share your advice for succeeding in this course..."
-                        required
                         rows={4}
+                        style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            marginTop: '6px',
+                            border: body.length > 0 && body.length < 15 ? '2px solid #f59e0b' : '2px solid #e5e7eb',
+                            borderRadius: '10px',
+                            fontSize: '15px',
+                            outline: 'none',
+                            resize: 'vertical'
+                        }}
+                    />
+                </label>
+
+                {error && (
+                    <div style={{
+                        padding: '12px',
+                        backgroundColor: '#fef2f2',
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                    }}>
+                        <AlertCircle size={18} color="#dc2626" />
+                        <span style={{ color: '#dc2626', fontSize: '14px' }}>{error}</span>
+                    </div>
+                )}
+
+                <button
+                    type="submit"
+                    disabled={loading || !isValid}
+                    style={{
+                        width: '100%',
+                        padding: '14px',
+                        backgroundColor: loading || !isValid ? '#d1d5db' : '#a6192e',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '12px',
+                        fontSize: '16px',
+                        fontWeight: '700',
+                        cursor: loading || !isValid ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                    }}
+                >
+                    {loading ? <Loader2 size={20} className="animate-spin" /> : <MessageSquare size={20} />}
+                    {loading ? 'Submitting...' : 'Share Tip'}
+                </button>
+            </form>
+        </ModalWrapper>
+    );
+}
+
+// Recommend Resource Modal - with type selector and description
+export function RecommendResourceModal({ isOpen, onClose, courseCode, onSuccess }) {
+    const { user } = useUser();
+    const { getToken } = useAuth();
+    const [title, setTitle] = useState('');
+    const [url, setUrl] = useState('');
+    const [description, setDescription] = useState('');
+    const [resourceType, setResourceType] = useState(''); // video | reading | practice
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const RESOURCE_TYPES = [
+        { id: 'video', label: 'Video', emoji: '🎬', color: '#dc2626' },
+        { id: 'reading', label: 'Reading', emoji: '📖', color: '#2563eb' },
+        { id: 'practice', label: 'Practice', emoji: '✏️', color: '#16a34a' }
+    ];
+
+    const validateUrl = (urlString) => {
+        try {
+            new URL(urlString);
+            return urlString.startsWith('http://') || urlString.startsWith('https://');
+        } catch {
+            return false;
+        }
+    };
+
+    const isValid = title.trim() && url.trim() && resourceType && validateUrl(url);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!isValid) {
+            if (!validateUrl(url)) {
+                setError('Please enter a valid URL starting with http:// or https://');
+            }
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+
+        try {
+            const token = await getToken();
+            await createContribution({
+                courseCode,
+                type: 'resource',
+                title: title.trim(),
+                url: url.trim(),
+                body: description.trim() || null,
+                resourceType,
+                displayName: user?.fullName || user?.username || 'Anonymous'
+            }, token);
+
+            onSuccess?.();
+            onClose();
+            setTitle('');
+            setUrl('');
+            setDescription('');
+            setResourceType('');
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <ModalWrapper isOpen={isOpen} onClose={onClose} title="Recommend a Resource" icon={Link2}>
+            <form onSubmit={handleSubmit}>
+                {/* Resource Type Selector */}
+                <div style={{ marginBottom: '20px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '8px' }}>
+                        Resource Type <span style={{ color: '#ef4444' }}>*</span>
+                    </span>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        {RESOURCE_TYPES.map(t => (
+                            <button
+                                key={t.id}
+                                type="button"
+                                onClick={() => setResourceType(t.id)}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px 16px',
+                                    borderRadius: '12px',
+                                    border: resourceType === t.id ? `2px solid ${t.color}` : '2px solid #e5e7eb',
+                                    backgroundColor: resourceType === t.id ? `${t.color}10` : 'white',
+                                    color: resourceType === t.id ? t.color : '#4b5563',
+                                    fontWeight: '600',
+                                    fontSize: '14px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                }}
+                            >
+                                <span style={{ fontSize: '20px' }}>{t.emoji}</span>
+                                {t.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <label style={{ display: 'block', marginBottom: '16px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+                        Title <span style={{ color: '#ef4444' }}>*</span>
+                    </span>
+                    <input
+                        type="text"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        placeholder="e.g., Great YouTube series on Data Structures"
+                        style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            marginTop: '6px',
+                            border: '2px solid #e5e7eb',
+                            borderRadius: '10px',
+                            fontSize: '15px',
+                            outline: 'none'
+                        }}
+                    />
+                </label>
+
+                <label style={{ display: 'block', marginBottom: '16px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+                        URL <span style={{ color: '#ef4444' }}>*</span>
+                    </span>
+                    <input
+                        type="url"
+                        value={url}
+                        onChange={(e) => { setUrl(e.target.value); setError(''); }}
+                        placeholder="https://..."
+                        style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            marginTop: '6px',
+                            border: '2px solid #e5e7eb',
+                            borderRadius: '10px',
+                            fontSize: '15px',
+                            outline: 'none'
+                        }}
+                    />
+                </label>
+
+                <label style={{ display: 'block', marginBottom: '16px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+                        Description <span style={{ color: '#9ca3af', fontWeight: '400' }}>(optional)</span>
+                    </span>
+                    <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Why is this resource helpful?"
+                        rows={2}
                         style={{
                             width: '100%',
                             padding: '12px 16px',
@@ -392,153 +688,17 @@ export function ShareTipsModal({ isOpen, onClose, courseCode, onSuccess }) {
 
                 <button
                     type="submit"
-                    disabled={loading || !title.trim() || !body.trim()}
+                    disabled={loading || !title.trim() || !url.trim() || !resourceType}
                     style={{
                         width: '100%',
                         padding: '14px',
-                        backgroundColor: loading || !title.trim() || !body.trim() ? '#d1d5db' : '#a6192e',
+                        backgroundColor: loading || !title.trim() || !url.trim() || !resourceType ? '#d1d5db' : '#a6192e',
                         color: 'white',
                         border: 'none',
                         borderRadius: '12px',
                         fontSize: '16px',
                         fontWeight: '700',
-                        cursor: loading || !title.trim() || !body.trim() ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '8px'
-                    }}
-                >
-                    {loading ? <Loader2 size={20} className="animate-spin" /> : <MessageSquare size={20} />}
-                    {loading ? 'Submitting...' : 'Share Tip'}
-                </button>
-            </form>
-        </ModalWrapper>
-    );
-}
-
-// Recommend Resource Modal
-export function RecommendResourceModal({ isOpen, onClose, courseCode, onSuccess }) {
-    const { user } = useUser();
-    const { getToken } = useAuth();
-    const [title, setTitle] = useState('');
-    const [url, setUrl] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-
-    const validateUrl = (urlString) => {
-        try {
-            new URL(urlString);
-            return urlString.startsWith('http://') || urlString.startsWith('https://');
-        } catch {
-            return false;
-        }
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!title.trim() || !url.trim()) return;
-
-        if (!validateUrl(url)) {
-            setError('Please enter a valid URL starting with http:// or https://');
-            return;
-        }
-
-        setLoading(true);
-        setError('');
-
-        try {
-            const token = await getToken();
-            await createContribution({
-                courseCode,
-                type: 'resource',
-                title: title.trim(),
-                url: url.trim(),
-                displayName: user?.fullName || user?.username || 'Anonymous'
-            }, token);
-
-            onSuccess?.();
-            onClose();
-            setTitle('');
-            setUrl('');
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <ModalWrapper isOpen={isOpen} onClose={onClose} title="Recommend a Resource" icon={Link2}>
-            <form onSubmit={handleSubmit}>
-                <label style={{ display: 'block', marginBottom: '16px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>Title</span>
-                    <input
-                        type="text"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        placeholder="e.g., Great YouTube series on Data Structures"
-                        required
-                        style={{
-                            width: '100%',
-                            padding: '12px 16px',
-                            marginTop: '6px',
-                            border: '2px solid #e5e7eb',
-                            borderRadius: '10px',
-                            fontSize: '15px',
-                            outline: 'none'
-                        }}
-                    />
-                </label>
-
-                <label style={{ display: 'block', marginBottom: '16px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>URL</span>
-                    <input
-                        type="url"
-                        value={url}
-                        onChange={(e) => { setUrl(e.target.value); setError(''); }}
-                        placeholder="https://..."
-                        required
-                        style={{
-                            width: '100%',
-                            padding: '12px 16px',
-                            marginTop: '6px',
-                            border: '2px solid #e5e7eb',
-                            borderRadius: '10px',
-                            fontSize: '15px',
-                            outline: 'none'
-                        }}
-                    />
-                </label>
-
-                {error && (
-                    <div style={{
-                        padding: '12px',
-                        backgroundColor: '#fef2f2',
-                        borderRadius: '8px',
-                        marginBottom: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                    }}>
-                        <AlertCircle size={18} color="#dc2626" />
-                        <span style={{ color: '#dc2626', fontSize: '14px' }}>{error}</span>
-                    </div>
-                )}
-
-                <button
-                    type="submit"
-                    disabled={loading || !title.trim() || !url.trim()}
-                    style={{
-                        width: '100%',
-                        padding: '14px',
-                        backgroundColor: loading || !title.trim() || !url.trim() ? '#d1d5db' : '#a6192e',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '12px',
-                        fontSize: '16px',
-                        fontWeight: '700',
-                        cursor: loading || !title.trim() || !url.trim() ? 'not-allowed' : 'pointer',
+                        cursor: loading || !title.trim() || !url.trim() || !resourceType ? 'not-allowed' : 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',

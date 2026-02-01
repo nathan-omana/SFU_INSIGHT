@@ -1,14 +1,20 @@
 // API client for contributions
 const API_BASE = 'http://localhost:3001';
 
-export async function createContribution({ courseCode, type, title, body, url, displayName }, token) {
+export async function createContribution({
+    courseCode, type, title, body, url, displayName,
+    section, mattersIntensity, resourceType
+}, token) {
     const response = await fetch(`${API_BASE}/api/contributions`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ courseCode, type, title, body, url, displayName })
+        body: JSON.stringify({
+            courseCode, type, title, body, url, displayName,
+            section, mattersIntensity, resourceType
+        })
     });
 
     if (!response.ok) {
@@ -18,6 +24,7 @@ export async function createContribution({ courseCode, type, title, body, url, d
 
     return response.json();
 }
+
 
 export async function uploadNotes({ courseCode, title, file, displayName }, token, onProgress) {
     // Convert file to base64
@@ -86,4 +93,34 @@ export async function getDownloadUrl(contributionId, token) {
 
     const data = await response.json();
     return data.url;
+}
+
+export async function toggleVote(contributionId, token) {
+    const response = await fetch(`${API_BASE}/api/contributions/${contributionId}/vote`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to toggle vote');
+    }
+
+    return response.json(); // { voted: true/false }
+}
+
+export async function getMyVotes(courseCode, token) {
+    const response = await fetch(`${API_BASE}/api/contributions/${encodeURIComponent(courseCode)}/my-votes`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to get votes');
+    }
+
+    return response.json(); // Array of contribution IDs
 }

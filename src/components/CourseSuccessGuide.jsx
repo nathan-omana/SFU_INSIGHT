@@ -3,13 +3,14 @@ import {
     ArrowLeft, ChevronDown, ChevronUp, Star, Download,
     MessageSquare, BookOpen, FileText, Play, Link2,
     ExternalLink, Upload, Clock, CheckCircle,
-    AlertTriangle, XCircle, Lock
+    AlertTriangle, XCircle, Lock, ThumbsUp
 } from 'lucide-react';
-import { useUser, useClerk } from '@clerk/clerk-react';
+import { useUser, useClerk, useAuth } from '@clerk/clerk-react';
 import { generateCourseData } from '../utils/mockDataGenerator';
 import { CMPT_225_DATA, isCMPT225 } from '../data/demoData';
 import StudyGuidePreview from './StudyGuidePreview';
 import { UploadNotesModal, ShareTipsModal, RecommendResourceModal, Toast } from './ContributionModals';
+import { listContributions, toggleVote, getMyVotes, getDownloadUrl } from '../api/contributions';
 
 // --- SUB-COMPONENTS --- //
 
@@ -206,10 +207,21 @@ function QuoteCard({ quote, author }) {
 export default function CourseSuccessGuide({ course, onBack }) {
     const { isSignedIn } = useUser();
     const { openSignIn } = useClerk();
+    const { getToken } = useAuth();
 
     const [data, setData] = useState(null);
     const [isDemoMode, setIsDemoMode] = useState(false);
     const [selectedNote, setSelectedNote] = useState(null);
+
+    // Real contributions from Supabase - grouped by section
+    const [realContributions, setRealContributions] = useState({
+        notes: [],      // Alumni Notes & Study Guides
+        advice: [],     // Advice From Students  
+        matters: [],    // What Actually Matters
+        resources: []   // Recommended Resources
+    });
+    const [myVotes, setMyVotes] = useState([]); // IDs of contributions I've voted for
+    const [loadingContribs, setLoadingContribs] = useState(false);
 
     // Contribution modal state
     const [showUploadModal, setShowUploadModal] = useState(false);
@@ -232,13 +244,115 @@ export default function CourseSuccessGuide({ course, onBack }) {
         else if (type === 'resources') setShowResourceModal(true);
     };
 
-    // Success callback - show toast
-    const handleContributionSuccess = () => {
+    // Success callback - show toast and refresh contributions
+    const handleContributionSuccess = async () => {
         setToast({ message: 'Contribution submitted successfully!', type: 'success' });
         setTimeout(() => setToast({ message: '', type: 'success' }), 4000);
-        // In a full implementation, we'd also refresh the contributions list here
+        // Refresh contributions list
+        await fetchContributions();
     };
 
+    // Fetch real contributions from Supabase
+    const fetchContributions = async () => {
+        if (!course?.code) return;
+        setLoadingContribs(true);
+        try {
+            const all = await listContributions(course.code);
+            // Group by section (using section field, with fallback to type-based logic)
+            setRealContributions({
+                notes: all.filter(c => c.section === 'notes' || (c.contribution_type === 'note' && !c.section)),
+                advice: all.filter(c => c.section === 'advice'),
+                matters: all.filter(c => c.section === 'matters'),
+                resources: all.filter(c => c.section === 'resources' || (c.contribution_type === 'resource' && !c.section))
+            });
+
+            // Fetch user's votes if signed in
+            if (isSignedIn) {
+                const token = await getToken();
+                if (token) {
+                    try {
+                        const votes = await getMyVotes(course.code, token);
+                        setMyVotes(votes);
+                    } catch (e) {
+                        console.log('Could not fetch votes:', e);
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching contributions:', err);
+        } finally {
+            setLoadingContribs(false);
+        }
+    };
+
+    // Handle upvote toggle
+    const handleUpvote = async (contributionId) => {
+        if (!isSignedIn) {
+            openSignIn({
+                afterSignInUrl: window.location.href,
+                afterSignUpUrl: window.location.href
+            });
+            return;
+        }
+
+        try {
+            const token = await getToken();
+            const wasVoted = myVotes.includes(contributionId);
+
+            // Optimistic update
+            if (wasVoted) {
+                setMyVotes(prev => prev.filter(id => id !== contributionId));
+                // Decrement count in local state
+                setRealContributions(prev => ({
+                    notes: prev.notes.map(c => c.id === contributionId ? { ...c, upvotes: (c.upvotes || 0) - 1 } : c),
+                    tips: prev.tips.map(c => c.id === contributionId ? { ...c, upvotes: (c.upvotes || 0) - 1 } : c),
+                    resources: prev.resources.map(c => c.id === contributionId ? { ...c, upvotes: (c.upvotes || 0) - 1 } : c)
+                }));
+            } else {
+                setMyVotes(prev => [...prev, contributionId]);
+                // Increment count in local state
+                setRealContributions(prev => ({
+                    notes: prev.notes.map(c => c.id === contributionId ? { ...c, upvotes: (c.upvotes || 0) + 1 } : c),
+                    tips: prev.tips.map(c => c.id === contributionId ? { ...c, upvotes: (c.upvotes || 0) + 1 } : c),
+                    resources: prev.resources.map(c => c.id === contributionId ? { ...c, upvotes: (c.upvotes || 0) + 1 } : c)
+                }));
+            }
+
+            // Make API call
+            await toggleVote(contributionId, token);
+        } catch (err) {
+            console.error('Error toggling vote:', err);
+            setToast({ message: 'Failed to update vote', type: 'error' });
+            setTimeout(() => setToast({ message: '', type: 'success' }), 3000);
+            // Revert on error - refetch
+            await fetchContributions();
+        }
+    };
+
+    // Handle file download
+    const handleDownload = async (contribution) => {
+        if (!contribution.file_path) return;
+
+        if (!isSignedIn) {
+            openSignIn({
+                afterSignInUrl: window.location.href,
+                afterSignUpUrl: window.location.href
+            });
+            return;
+        }
+
+        try {
+            const token = await getToken();
+            const url = await getDownloadUrl(contribution.id, token);
+            window.open(url, '_blank');
+        } catch (err) {
+            console.error('Error getting download URL:', err);
+            setToast({ message: 'Failed to get download link', type: 'error' });
+            setTimeout(() => setToast({ message: '', type: 'success' }), 3000);
+        }
+    };
+
+    // Fetch demo/mock data
     useEffect(() => {
         if (course) {
             // Check if this is CMPT 225 - use demo data
@@ -252,6 +366,8 @@ export default function CourseSuccessGuide({ course, onBack }) {
                     setIsDemoMode(false);
                 }, 300);
             }
+            // Also fetch real contributions
+            fetchContributions();
         }
     }, [course]);
 
@@ -466,11 +582,88 @@ export default function CourseSuccessGuide({ course, onBack }) {
                     </Accordion>
 
                     {/* Alumni Notes */}
-                    <Accordion title="Alumni Notes & Study Guides" icon={BookOpen} defaultOpen={false}>
+                    <Accordion title="Alumni Notes & Study Guides" icon={BookOpen} defaultOpen={realContributions.notes.length > 0}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {/* Real contributions from Supabase */}
+                            {realContributions.notes.map((note) => (
+                                <div
+                                    key={note.id}
+                                    style={{
+                                        padding: '16px',
+                                        backgroundColor: 'white',
+                                        border: '2px solid #a6192e',
+                                        borderRadius: '12px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onClick={() => handleDownload(note)}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(166,25,46,0.2)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.boxShadow = 'none';
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                                <FileText size={16} color="#a6192e" />
+                                                <h4 style={{ fontWeight: '700', color: '#111827', fontSize: '15px' }}>{note.title}</h4>
+                                            </div>
+                                            <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '10px' }}>
+                                                Shared by {note.display_name || 'Anonymous'} • {new Date(note.created_at).toLocaleDateString()}
+                                            </p>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <span style={{
+                                                    fontSize: '11px',
+                                                    backgroundColor: '#fef2f2',
+                                                    color: '#a6192e',
+                                                    padding: '4px 10px',
+                                                    borderRadius: '20px',
+                                                    fontWeight: '600'
+                                                }}>
+                                                    📥 {note.file_name || 'Download'}
+                                                </span>
+                                                <span style={{
+                                                    fontSize: '11px',
+                                                    backgroundColor: '#ecfdf5',
+                                                    color: '#10b981',
+                                                    padding: '4px 10px',
+                                                    borderRadius: '20px',
+                                                    fontWeight: '500'
+                                                }}>
+                                                    Community Contribution
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleUpvote(note.id); }}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                fontSize: '14px',
+                                                color: myVotes.includes(note.id) ? '#a6192e' : '#10b981',
+                                                fontWeight: '700',
+                                                backgroundColor: myVotes.includes(note.id) ? '#fef2f2' : '#ecfdf5',
+                                                padding: '8px 14px',
+                                                borderRadius: '20px',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            <ThumbsUp size={16} fill={myVotes.includes(note.id) ? '#a6192e' : 'transparent'} />
+                                            {note.upvotes || 0}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* Demo/static notes */}
                             {alumniNotes.map((note, i) => (
                                 <div
-                                    key={i}
+                                    key={`demo-${i}`}
                                     style={{
                                         padding: '16px',
                                         backgroundColor: 'white',
@@ -521,41 +714,67 @@ export default function CourseSuccessGuide({ course, onBack }) {
                                     </div>
                                 </div>
                             ))}
+
+                            {/* Empty state */}
+                            {realContributions.notes.length === 0 && alumniNotes.length === 0 && (
+                                <div style={{ textAlign: 'center', padding: '32px', color: '#9ca3af' }}>
+                                    <BookOpen size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                                    <p>No notes yet. Be the first to contribute!</p>
+                                </div>
+                            )}
                         </div>
                     </Accordion>
 
                     {/* What Actually Matters */}
-                    <Accordion title="What Actually Matters" icon={CheckCircle} defaultOpen={false}>
+                    <Accordion title="What Actually Matters" icon={CheckCircle} defaultOpen={realContributions.matters.length > 0}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            {/* Focus Heavily On - Green */}
                             <div>
                                 <h4 style={{ fontSize: '13px', fontWeight: '700', color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <CheckCircle size={16} /> Focus heavily on
                                 </h4>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {/* Real contributions */}
+                                    {realContributions.matters.filter(m => m.matters_intensity === 'focus_heavily').map(item => (
+                                        <FocusItem key={item.id} level="green" title={item.title} description={item.body} />
+                                    ))}
+                                    {/* Demo data */}
                                     {focusAreas.green.map((item, i) => (
-                                        <FocusItem key={i} level="green" title={item.title} description={item.description} />
+                                        <FocusItem key={`demo-${i}`} level="green" title={item.title} description={item.description} />
                                     ))}
                                 </div>
                             </div>
 
+                            {/* Know Well - Yellow */}
                             <div>
                                 <h4 style={{ fontSize: '13px', fontWeight: '700', color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <AlertTriangle size={16} /> Know well
                                 </h4>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {/* Real contributions */}
+                                    {realContributions.matters.filter(m => m.matters_intensity === 'know_well').map(item => (
+                                        <FocusItem key={item.id} level="yellow" title={item.title} description={item.body} />
+                                    ))}
+                                    {/* Demo data */}
                                     {focusAreas.yellow.map((item, i) => (
-                                        <FocusItem key={i} level="yellow" title={item.title} description={item.description} />
+                                        <FocusItem key={`demo-${i}`} level="yellow" title={item.title} description={item.description} />
                                     ))}
                                 </div>
                             </div>
 
+                            {/* Don't Overinvest - Red */}
                             <div>
                                 <h4 style={{ fontSize: '13px', fontWeight: '700', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <XCircle size={16} /> Don't overinvest in
                                 </h4>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {/* Real contributions */}
+                                    {realContributions.matters.filter(m => m.matters_intensity === 'dont_overinvest').map(item => (
+                                        <FocusItem key={item.id} level="red" title={item.title} description={item.body} />
+                                    ))}
+                                    {/* Demo data */}
                                     {focusAreas.red.map((item, i) => (
-                                        <FocusItem key={i} level="red" title={item.title} description={item.description} />
+                                        <FocusItem key={`demo-${i}`} level="red" title={item.title} description={item.description} />
                                     ))}
                                 </div>
                             </div>
@@ -563,37 +782,115 @@ export default function CourseSuccessGuide({ course, onBack }) {
                     </Accordion>
 
                     {/* Recommended Resources */}
-                    <Accordion title="Recommended Resources" icon={Link2} defaultOpen={false}>
+                    <Accordion title="Recommended Resources" icon={Link2} defaultOpen={realContributions.resources.length > 0}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            {/* Videos */}
                             <div>
                                 <h4 style={{ fontSize: '13px', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <Play size={16} color="#ef4444" /> Videos
                                 </h4>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {/* Real contributions */}
+                                    {realContributions.resources.filter(r => r.resource_type === 'video').map(item => (
+                                        <a
+                                            key={item.id}
+                                            href={item.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                display: 'flex', alignItems: 'flex-start', gap: '12px',
+                                                padding: '14px', backgroundColor: 'white', border: '2px solid #a6192e',
+                                                borderRadius: '12px', textDecoration: 'none', transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            <Play size={20} color="#ef4444" style={{ flexShrink: 0, marginTop: '2px' }} />
+                                            <div style={{ flex: 1 }}>
+                                                <p style={{ fontWeight: '600', color: '#111827', fontSize: '14px' }}>{item.title}</p>
+                                                {item.body && <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>{item.body}</p>}
+                                                <span style={{ fontSize: '11px', color: '#a6192e', marginTop: '4px', display: 'inline-block' }}>
+                                                    Shared by {item.display_name || 'Anonymous'}
+                                                </span>
+                                            </div>
+                                            <ExternalLink size={16} color="#9ca3af" />
+                                        </a>
+                                    ))}
+                                    {/* Demo data */}
                                     {resources.videos.map((r, i) => (
-                                        <ResourceItem key={i} icon={Play} title={r.title} description={r.description} link={r.link} />
+                                        <ResourceItem key={`demo-${i}`} icon={Play} title={r.title} description={r.description} link={r.link} />
                                     ))}
                                 </div>
                             </div>
 
+                            {/* Readings */}
                             <div>
                                 <h4 style={{ fontSize: '13px', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <BookOpen size={16} color="#3b82f6" /> Readings
                                 </h4>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {/* Real contributions */}
+                                    {realContributions.resources.filter(r => r.resource_type === 'reading').map(item => (
+                                        <a
+                                            key={item.id}
+                                            href={item.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                display: 'flex', alignItems: 'flex-start', gap: '12px',
+                                                padding: '14px', backgroundColor: 'white', border: '2px solid #a6192e',
+                                                borderRadius: '12px', textDecoration: 'none', transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            <BookOpen size={20} color="#3b82f6" style={{ flexShrink: 0, marginTop: '2px' }} />
+                                            <div style={{ flex: 1 }}>
+                                                <p style={{ fontWeight: '600', color: '#111827', fontSize: '14px' }}>{item.title}</p>
+                                                {item.body && <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>{item.body}</p>}
+                                                <span style={{ fontSize: '11px', color: '#a6192e', marginTop: '4px', display: 'inline-block' }}>
+                                                    Shared by {item.display_name || 'Anonymous'}
+                                                </span>
+                                            </div>
+                                            <ExternalLink size={16} color="#9ca3af" />
+                                        </a>
+                                    ))}
+                                    {/* Demo data */}
                                     {resources.readings.map((r, i) => (
-                                        <ResourceItem key={i} icon={BookOpen} title={r.title} description={r.description} link={r.link} />
+                                        <ResourceItem key={`demo-${i}`} icon={BookOpen} title={r.title} description={r.description} link={r.link} />
                                     ))}
                                 </div>
                             </div>
 
+                            {/* Practice */}
                             <div>
                                 <h4 style={{ fontSize: '13px', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <FileText size={16} color="#8b5cf6" /> Practice
                                 </h4>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {/* Real contributions */}
+                                    {realContributions.resources.filter(r => r.resource_type === 'practice').map(item => (
+                                        <a
+                                            key={item.id}
+                                            href={item.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                display: 'flex', alignItems: 'flex-start', gap: '12px',
+                                                padding: '14px', backgroundColor: 'white', border: '2px solid #a6192e',
+                                                borderRadius: '12px', textDecoration: 'none', transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            <FileText size={20} color="#8b5cf6" style={{ flexShrink: 0, marginTop: '2px' }} />
+                                            <div style={{ flex: 1 }}>
+                                                <p style={{ fontWeight: '600', color: '#111827', fontSize: '14px' }}>{item.title}</p>
+                                                {item.body && <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>{item.body}</p>}
+                                                <span style={{ fontSize: '11px', color: '#a6192e', marginTop: '4px', display: 'inline-block' }}>
+                                                    Shared by {item.display_name || 'Anonymous'}
+                                                </span>
+                                            </div>
+                                            <ExternalLink size={16} color="#9ca3af" />
+                                        </a>
+                                    ))}
+                                    {/* Demo data */}
                                     {resources.practice.map((r, i) => (
-                                        <ResourceItem key={i} icon={FileText} title={r.title} description={r.description} link={r.link} />
+                                        <ResourceItem key={`demo-${i}`} icon={FileText} title={r.title} description={r.description} link={r.link} />
                                     ))}
                                 </div>
                             </div>
@@ -601,11 +898,37 @@ export default function CourseSuccessGuide({ course, onBack }) {
                     </Accordion>
 
                     {/* Student Advice */}
-                    <Accordion title="Advice From Students" icon={MessageSquare} defaultOpen={false}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
-                            {studentAdvice.map((advice, i) => (
-                                <QuoteCard key={i} quote={advice.quote} author={advice.author} />
+                    <Accordion title="Advice From Students" icon={MessageSquare} defaultOpen={realContributions.advice.length > 0}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            {/* Real contributions from Supabase */}
+                            {realContributions.advice.map((item) => (
+                                <div key={item.id} style={{
+                                    padding: '16px 20px',
+                                    backgroundColor: 'white',
+                                    border: '2px solid #a6192e',
+                                    borderRadius: '12px'
+                                }}>
+                                    <p style={{
+                                        fontSize: '15px',
+                                        color: '#374151',
+                                        fontStyle: 'italic',
+                                        marginBottom: '10px',
+                                        lineHeight: '1.6'
+                                    }}>
+                                        "{item.body}"
+                                    </p>
+                                    <p style={{ fontSize: '13px', color: '#a6192e', fontWeight: '600' }}>
+                                        — {item.display_name || 'Anonymous'}
+                                    </p>
+                                </div>
                             ))}
+
+                            {/* Demo data */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                                {studentAdvice.map((advice, i) => (
+                                    <QuoteCard key={i} quote={advice.quote} author={advice.author} />
+                                ))}
+                            </div>
                         </div>
                     </Accordion>
 

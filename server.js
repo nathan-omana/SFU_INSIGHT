@@ -230,7 +230,7 @@ app.post('/api/contributions', requireAuth, async (req, res) => {
             return res.status(503).json({ error: 'Database not configured' });
         }
 
-        const { courseCode, type, title, body, url, displayName } = req.body;
+        const { courseCode, type, title, body, url, displayName, section, mattersIntensity, resourceType } = req.body;
 
         if (!courseCode || !type || !title) {
             return res.status(400).json({ error: 'Missing required fields' });
@@ -244,6 +244,26 @@ app.post('/api/contributions', requireAuth, async (req, res) => {
             return res.status(400).json({ error: 'URL required for resource' });
         }
 
+        // Validate tip fields
+        if (type === 'tip') {
+            if (!section || !['notes', 'advice', 'matters'].includes(section)) {
+                return res.status(400).json({ error: 'Valid section required for tips' });
+            }
+            if (section === 'matters' && !mattersIntensity) {
+                return res.status(400).json({ error: 'Intensity required for "What Actually Matters" tips' });
+            }
+            if (body && body.length < 15) {
+                return res.status(400).json({ error: 'Tip must be at least 15 characters' });
+            }
+        }
+
+        // Validate resource fields
+        if (type === 'resource') {
+            if (!resourceType || !['video', 'reading', 'practice'].includes(resourceType)) {
+                return res.status(400).json({ error: 'Valid resource type required' });
+            }
+        }
+
         // Validate URL format
         if (url && !/^https?:\/\/.+/.test(url)) {
             return res.status(400).json({ error: 'Invalid URL format' });
@@ -255,8 +275,11 @@ app.post('/api/contributions', requireAuth, async (req, res) => {
                 course_code: courseCode,
                 contribution_type: type,
                 title,
-                body: type === 'tip' ? body : null,
+                body: body || null,
                 url: type === 'resource' ? url : null,
+                section: section || (type === 'resource' ? 'resources' : null),
+                matters_intensity: section === 'matters' ? mattersIntensity : null,
+                resource_type: type === 'resource' ? resourceType : null,
                 created_by: req.userId,
                 display_name: displayName || 'Anonymous'
             })
@@ -265,13 +288,14 @@ app.post('/api/contributions', requireAuth, async (req, res) => {
 
         if (error) throw error;
 
-        console.log(`[CONTRIBUTION] User ${req.userId} submitted ${type} for ${courseCode}`);
+        console.log(`[CONTRIBUTION] User ${req.userId} submitted ${type} (section: ${section || 'resources'}) for ${courseCode}`);
         res.json({ success: true, contribution: data });
     } catch (error) {
         console.error('Error creating contribution:', error);
         res.status(500).json({ error: 'Failed to create contribution' });
     }
 });
+
 
 // 7. Upload file contribution (notes)
 app.post('/api/contributions/upload', requireAuth, async (req, res) => {
@@ -404,6 +428,84 @@ app.get('/api/contributions/download/:id', requireAuth, async (req, res) => {
     } catch (error) {
         console.error('Error generating download URL:', error);
         res.status(500).json({ error: 'Failed to generate download URL' });
+    }
+});
+
+// 10. Toggle vote on a contribution
+app.post('/api/contributions/:id/vote', requireAuth, async (req, res) => {
+    try {
+        if (!supabase) {
+            return res.status(503).json({ error: 'Database not configured' });
+        }
+
+        const { id } = req.params;
+        const userId = req.userId;
+
+        // Check if user already voted
+        const { data: existingVote } = await supabase
+            .from('contribution_votes')
+            .select('id')
+            .eq('contribution_id', id)
+            .eq('user_id', userId)
+            .single();
+
+        if (existingVote) {
+            // Remove vote (un-vote)
+            await supabase
+                .from('contribution_votes')
+                .delete()
+                .eq('contribution_id', id)
+                .eq('user_id', userId);
+
+            // Decrement upvotes count
+            await supabase.rpc('decrement_upvotes', { contribution_id: id });
+
+            console.log(`[VOTE] User ${userId} removed vote from ${id}`);
+            res.json({ voted: false });
+        } else {
+            // Add vote
+            const { error } = await supabase
+                .from('contribution_votes')
+                .insert({ contribution_id: id, user_id: userId });
+
+            if (error) throw error;
+
+            // Increment upvotes count
+            await supabase.rpc('increment_upvotes', { contribution_id: id });
+
+            console.log(`[VOTE] User ${userId} voted for ${id}`);
+            res.json({ voted: true });
+        }
+    } catch (error) {
+        console.error('Error toggling vote:', error);
+        res.status(500).json({ error: 'Failed to toggle vote' });
+    }
+});
+
+// 11. Get user's votes for a course (to mark which they've voted for)
+app.get('/api/contributions/:courseCode/my-votes', requireAuth, async (req, res) => {
+    try {
+        if (!supabase) {
+            return res.json([]);
+        }
+
+        const { courseCode } = req.params;
+        const userId = req.userId;
+
+        // Get all contribution IDs for this course that the user has voted for
+        const { data, error } = await supabase
+            .from('contribution_votes')
+            .select('contribution_id, contributions!inner(course_code)')
+            .eq('user_id', userId)
+            .eq('contributions.course_code', courseCode);
+
+        if (error) throw error;
+
+        const votedIds = (data || []).map(v => v.contribution_id);
+        res.json(votedIds);
+    } catch (error) {
+        console.error('Error fetching user votes:', error);
+        res.status(500).json({ error: 'Failed to fetch user votes' });
     }
 });
 
