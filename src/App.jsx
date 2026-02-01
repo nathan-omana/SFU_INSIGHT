@@ -657,7 +657,12 @@ function App() {
                             </div>
 
                             {/* Major Selection */}
-                            <div style={{ marginTop: '2rem', position: 'relative' }}>
+                            <div style={{
+                                marginTop: '0.75rem',       /* Reduced from 2rem to move it up */
+                                position: 'relative',
+                                display: 'flex',            /* Added to enable centering */
+                                justifyContent: 'center'    /* Centers the button horizontally */
+                            }}>
                                 <button
                                     onClick={() => setShowMajorDropdown(!showMajorDropdown)}
                                     style={{
@@ -679,7 +684,7 @@ function App() {
                                 >
                                     <BookOpen size={20} />
                                     {selectedMajor ? selectedMajor.toUpperCase() : 'Select Your Major'}
-                                    <span style={{ marginLeft: '0.25rem', fontSize: '0.75rem' }}>{showMajorDropdown ? '▲' : '▼'}</span>
+                                    <span style={{ marginLeft: '0.1rem', fontSize: '0.75rem' }}>{showMajorDropdown ? '▲' : '▼'}</span>
                                 </button>
 
                                 {showMajorDropdown && (
