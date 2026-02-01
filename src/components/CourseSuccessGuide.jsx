@@ -3,7 +3,7 @@ import {
     ArrowLeft, ChevronDown, ChevronUp, Star, Download,
     MessageSquare, BookOpen, FileText, Play, Link2,
     ExternalLink, Upload, Clock, CheckCircle,
-    AlertTriangle, XCircle, Lock, ThumbsUp
+    AlertTriangle, XCircle, Lock, ThumbsUp, User
 } from 'lucide-react';
 import { useUser, useClerk, useAuth } from '@clerk/clerk-react';
 import { generateCourseData } from '../utils/mockDataGenerator';
@@ -11,6 +11,7 @@ import { CMPT_225_DATA, isCMPT225 } from '../data/demoData';
 import StudyGuidePreview from './StudyGuidePreview';
 import { UploadNotesModal, ShareTipsModal, RecommendResourceModal, Toast } from './ContributionModals';
 import { listContributions, toggleVote, getMyVotes, getDownloadUrl } from '../api/contributions';
+import { getSections, getSectionDetails } from '../api/sfuScheduleApi';
 
 // --- SUB-COMPONENTS --- //
 
@@ -229,6 +230,10 @@ export default function CourseSuccessGuide({ course, onBack }) {
     const [showResourceModal, setShowResourceModal] = useState(false);
     const [toast, setToast] = useState({ message: '', type: 'success' });
 
+    // Current instructors from SFU API
+    const [currentInstructors, setCurrentInstructors] = useState([]);
+    const [loadingInstructors, setLoadingInstructors] = useState(false);
+
     // Handle contribute button clicks - requires auth
     const handleContributeClick = (type) => {
         if (!isSignedIn) {
@@ -371,6 +376,80 @@ export default function CourseSuccessGuide({ course, onBack }) {
         }
     }, [course]);
 
+    // Fetch current instructors from SFU API
+    useEffect(() => {
+        if (!course?.code) return;
+
+        const fetchInstructors = async () => {
+            setLoadingInstructors(true);
+            try {
+                // Parse course code - e.g. "CMPT 225" -> {dept: "cmpt", num: "225"}
+                const match = course.code.match(/([A-Za-z]+)\s*(\d+[A-Za-z]?)/);
+                if (!match) {
+                    console.log('Could not parse course code:', course.code);
+                    setLoadingInstructors(false);
+                    return;
+                }
+
+                const dept = match[1].toLowerCase();
+                const courseNum = match[2];
+                console.log(`Fetching instructors for ${dept} ${courseNum}`);
+
+                // Fetch sections for Spring 2026
+                const sections = await getSections('2026', 'spring', dept, courseNum);
+                console.log('Sections response:', sections);
+
+                if (!sections || !Array.isArray(sections) || sections.length === 0) {
+                    console.log('No sections found');
+                    setCurrentInstructors([]);
+                    setLoadingInstructors(false);
+                    return;
+                }
+
+                // Get details for each section to find instructors
+                const instructorMap = new Map();
+
+                // Fetch details for UP TO 8 sections (no filtering - get all)
+                const sectionsToFetch = sections.slice(0, 8);
+                console.log('Fetching details for sections:', sectionsToFetch.map(s => s.value));
+
+                await Promise.all(sectionsToFetch.map(async (section) => {
+                    try {
+                        const details = await getSectionDetails('2026', 'spring', dept, courseNum, section.value);
+                        console.log(`Section ${section.value} details:`, details);
+
+                        // Check multiple possible locations for instructor data
+                        const instructors = details.instructor || details.instructors || [];
+                        const instructorArray = Array.isArray(instructors) ? instructors : [instructors];
+
+                        instructorArray.forEach(inst => {
+                            if (inst && inst.name && !instructorMap.has(inst.name)) {
+                                instructorMap.set(inst.name, {
+                                    name: inst.name,
+                                    email: inst.email || inst.mailto || '',
+                                    profileUrl: inst.profileUrl || inst.profile || '',
+                                    section: section.text || section.value || ''
+                                });
+                            }
+                        });
+                    } catch (e) {
+                        console.warn(`Failed to fetch section ${section.value}:`, e);
+                    }
+                }));
+
+                console.log('Found instructors:', Array.from(instructorMap.values()));
+                setCurrentInstructors(Array.from(instructorMap.values()));
+            } catch (error) {
+                console.error('Failed to fetch instructors:', error);
+                setCurrentInstructors([]);
+            } finally {
+                setLoadingInstructors(false);
+            }
+        };
+
+        fetchInstructors();
+    }, [course?.code]);
+
 
     if (!data) {
         return (
@@ -510,7 +589,7 @@ export default function CourseSuccessGuide({ course, onBack }) {
                     </h2>
                     <div style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(5, 1fr)',
+                        gridTemplateColumns: 'repeat(4, 1fr)',
                         gap: '12px'
                     }}>
                         <div style={{
@@ -533,53 +612,131 @@ export default function CourseSuccessGuide({ course, onBack }) {
                         <SnapshotCard label="Time Commitment" value={snapshot.timeCommitment} icon={Clock} />
                         <SnapshotCard label="Assessment" value={snapshot.assessmentStyle} icon={FileText} />
                         <SnapshotCard label="Math Intensity" value={snapshot.mathIntensity} icon={AlertTriangle} />
-                        <SnapshotCard label="Programming" value={snapshot.programming} icon={BookOpen} />
                     </div>
+                </section>
+
+                {/* Current Instructors (from SFU API) */}
+                <section style={{
+                    backgroundColor: 'white',
+                    borderRadius: '20px',
+                    padding: '28px',
+                    marginBottom: '24px',
+                    border: '1px solid #e5e7eb',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                }}>
+                    <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#111827', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <User size={20} color="#a6192e" /> Current Instructors (Spring 2026)
+                    </h2>
+
+                    {loadingInstructors ? (
+                        <div style={{ padding: '24px', textAlign: 'center', color: '#6b7280' }}>
+                            <div style={{ marginBottom: '8px' }}>Loading instructors...</div>
+                        </div>
+                    ) : currentInstructors.length > 0 ? (
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+                            gap: '16px'
+                        }}>
+                            {currentInstructors.map((instructor, idx) => (
+                                <div key={idx} style={{
+                                    padding: '16px',
+                                    backgroundColor: '#f9fafb',
+                                    border: '1px solid #e5e7eb',
+                                    borderRadius: '12px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    transition: 'all 0.2s'
+                                }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = '#a6192e';
+                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(166,25,46,0.15)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = '#e5e7eb';
+                                        e.currentTarget.style.boxShadow = 'none';
+                                    }}
+                                >
+                                    <div style={{
+                                        width: '48px',
+                                        height: '48px',
+                                        borderRadius: '50%',
+                                        backgroundColor: '#a6192e',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flexShrink: 0
+                                    }}>
+                                        <span style={{ color: 'white', fontWeight: '700', fontSize: '18px' }}>
+                                            {instructor.name.charAt(0)}
+                                        </span>
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: '700', color: '#111827', fontSize: '15px', marginBottom: '2px' }}>
+                                            {instructor.name}
+                                        </div>
+                                        {instructor.email && (
+                                            <a
+                                                href={`mailto:${instructor.email}`}
+                                                style={{
+                                                    fontSize: '13px',
+                                                    color: '#a6192e',
+                                                    textDecoration: 'none',
+                                                    display: 'block',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    whiteSpace: 'nowrap'
+                                                }}
+                                            >
+                                                {instructor.email}
+                                            </a>
+                                        )}
+                                        {instructor.section && (
+                                            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                                                Section: {instructor.section}
+                                            </div>
+                                        )}
+                                    </div>
+                                    {instructor.profileUrl && (
+                                        <a
+                                            href={instructor.profileUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                padding: '8px',
+                                                borderRadius: '8px',
+                                                backgroundColor: 'white',
+                                                border: '1px solid #e5e7eb',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}
+                                        >
+                                            <ExternalLink size={16} color="#6b7280" />
+                                        </a>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div style={{
+                            padding: '32px',
+                            textAlign: 'center',
+                            color: '#9ca3af',
+                            backgroundColor: '#f9fafb',
+                            borderRadius: '12px'
+                        }}>
+                            <User size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                            <p style={{ marginBottom: '8px' }}>No instructor information available for this term.</p>
+                            <p style={{ fontSize: '13px' }}>Check back closer to the term start date.</p>
+                        </div>
+                    )}
                 </section>
 
                 {/* Accordions */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-                    {/* Past Syllabi */}
-                    <Accordion title="Past Syllabi & Course Structure" icon={FileText} defaultOpen={true}>
-                        <p style={{ fontSize: '13px', color: '#6b7280', fontStyle: 'italic', marginBottom: '16px' }}>
-                            Syllabi may vary by instructor and term.
-                        </p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {syllabi.map((s, i) => (
-                                <div key={i} style={{
-                                    display: 'flex',
-                                    alignItems: 'flex-start',
-                                    justifyContent: 'space-between',
-                                    padding: '16px',
-                                    backgroundColor: '#f9fafb',
-                                    borderRadius: '12px',
-                                    border: '1px solid #e5e7eb'
-                                }}>
-                                    <div>
-                                        <div style={{ fontWeight: '700', color: '#111827', fontSize: '16px' }}>{s.term}</div>
-                                        <div style={{ fontSize: '14px', color: '#a6192e', fontWeight: '600', marginTop: '4px' }}>{s.prof}</div>
-                                        <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '6px' }}>Key topics: {s.topics}</div>
-                                    </div>
-                                    <button style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        padding: '8px 16px',
-                                        backgroundColor: 'white',
-                                        border: '1px solid #d1d5db',
-                                        borderRadius: '8px',
-                                        fontSize: '13px',
-                                        fontWeight: '600',
-                                        color: '#374151',
-                                        cursor: 'pointer'
-                                    }}>
-                                        <Download size={14} /> View
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </Accordion>
 
                     {/* Alumni Notes */}
                     <Accordion title="Alumni Notes & Study Guides" icon={BookOpen} defaultOpen={realContributions.notes.length > 0}>
