@@ -1,83 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import {
     ArrowLeft, ChevronDown, ChevronUp, Star, Download,
-    MessageSquare, BookOpen, AlertCircle, FileText,
-    BarChart2, Users, ExternalLink, Calendar, TrendingUp
+    MessageSquare, BookOpen, FileText, Play, Link2,
+    ExternalLink, Upload, Clock, CheckCircle,
+    AlertTriangle, XCircle
 } from 'lucide-react';
 import { generateCourseData } from '../utils/mockDataGenerator';
 
 // --- SUB-COMPONENTS --- //
 
-function CircularProgress({ value, max = 5, label, color = 'text-blue-600', subColor = 'stroke-blue-600' }) {
-    const radius = 36;
-    const circumference = 2 * Math.PI * radius;
-    const offset = circumference - (value / max) * circumference;
-
+function DifficultyStars({ rating, max = 5 }) {
     return (
-        <div className="flex flex-col items-center">
-            <div className="relative w-24 h-24 mb-2">
-                <svg className="w-full h-full transform -rotate-90">
-                    <circle
-                        className="text-gray-100"
-                        strokeWidth="8"
-                        stroke="currentColor"
-                        fill="transparent"
-                        r={radius}
-                        cx="48"
-                        cy="48"
-                    />
-                    <circle
-                        className={`${subColor} transition-all duration-1000 ease-out`}
-                        strokeWidth="8"
-                        strokeDasharray={circumference}
-                        strokeDashoffset={offset}
-                        strokeLinecap="round"
-                        stroke="currentColor"
-                        fill="transparent"
-                        r={radius}
-                        cx="48"
-                        cy="48"
-                    />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className={`text-2xl font-bold ${color}`}>{value}</span>
-                </div>
-            </div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{label}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {[...Array(max)].map((_, i) => (
+                <Star
+                    key={i}
+                    size={18}
+                    fill={i < rating ? '#facc15' : 'transparent'}
+                    color={i < rating ? '#facc15' : '#d1d5db'}
+                />
+            ))}
         </div>
     );
 }
 
-function ProfCard({ prof }) {
+function SnapshotCard({ label, value, icon: Icon }) {
     return (
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all transform hover:-translate-y-1">
-            <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-500">
-                        {prof.name.split(' ')[1][0]}
-                    </div>
-                    <h4 className="font-bold text-gray-900">{prof.name}</h4>
-                </div>
-                <div className="flex items-center gap-1 bg-yellow-50 text-yellow-700 px-2 py-1 rounded-lg text-xs font-bold">
-                    <Star size={12} fill="currentColor" /> {prof.rating}
-                </div>
+        <div style={{
+            backgroundColor: '#f9fafb',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            padding: '16px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '90px',
+            textAlign: 'center'
+        }}>
+            {Icon && <Icon size={20} color="#6b7280" style={{ marginBottom: '8px' }} />}
+            <div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                {label}
             </div>
-            <div className="flex flex-wrap gap-2 mb-4">
-                {prof.tags.map(tag => (
-                    <span key={tag} className="text-[10px] bg-gray-50 text-gray-600 px-2 py-1 rounded-md border border-gray-100 font-medium">
-                        {tag}
-                    </span>
-                ))}
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-xs text-gray-500 border-t border-gray-50 pt-3">
-                <div className="text-center">
-                    <span className="block font-bold text-gray-900 text-sm">{prof.difficulty}</span>
-                    <span>Difficulty</span>
-                </div>
-                <div className="text-center border-l border-gray-50">
-                    <span className="block font-bold text-gray-900 text-sm">{prof.wouldTakeAgain}</span>
-                    <span>Take Again</span>
-                </div>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: '#111827' }}>
+                {value}
             </div>
         </div>
     );
@@ -85,26 +51,148 @@ function ProfCard({ prof }) {
 
 function Accordion({ title, icon: Icon, children, defaultOpen = false }) {
     const [isOpen, setIsOpen] = useState(defaultOpen);
+
     return (
-        <div className="border border-gray-200 rounded-xl bg-white overflow-hidden mb-4 transition-all hover:shadow-md">
+        <div style={{
+            backgroundColor: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: '16px',
+            overflow: 'hidden',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+        }}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center justify-between p-5 bg-gray-50/30 hover:bg-gray-50 transition-colors"
+                style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '20px 24px',
+                    backgroundColor: isOpen ? '#f9fafb' : 'white',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = isOpen ? '#f9fafb' : 'white'}
             >
-                <div className="flex items-center gap-4">
-                    <div className={`p-2 rounded-lg shadow-sm ${isOpen ? 'bg-red-600 text-white' : 'bg-white text-red-700'} transition-colors`}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{
+                        padding: '10px',
+                        borderRadius: '12px',
+                        backgroundColor: isOpen ? '#a6192e' : '#f3f4f6',
+                        color: isOpen ? 'white' : '#6b7280',
+                        transition: 'all 0.2s'
+                    }}>
                         <Icon size={20} />
                     </div>
-                    <span className={`font-bold text-lg ${isOpen ? 'text-gray-900' : 'text-gray-700'}`}>{title}</span>
+                    <span style={{ fontSize: '18px', fontWeight: '700', color: '#111827' }}>{title}</span>
                 </div>
-                {isOpen ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
+                <div style={{
+                    padding: '6px',
+                    borderRadius: '8px',
+                    backgroundColor: isOpen ? '#e5e7eb' : 'transparent'
+                }}>
+                    {isOpen ? <ChevronUp size={20} color="#6b7280" /> : <ChevronDown size={20} color="#9ca3af" />}
+                </div>
             </button>
 
             {isOpen && (
-                <div className="p-6 border-t border-gray-100 animate-slide-down">
+                <div style={{
+                    padding: '24px',
+                    borderTop: '1px solid #f3f4f6'
+                }}>
                     {children}
                 </div>
             )}
+        </div>
+    );
+}
+
+function FocusItem({ level, title, description }) {
+    const colors = {
+        green: { bg: '#ecfdf5', border: '#a7f3d0', dot: '#10b981', text: '#065f46' },
+        yellow: { bg: '#fffbeb', border: '#fde68a', dot: '#f59e0b', text: '#92400e' },
+        red: { bg: '#fef2f2', border: '#fecaca', dot: '#ef4444', text: '#991b1b' }
+    };
+    const c = colors[level] || colors.green;
+
+    return (
+        <div style={{
+            padding: '16px',
+            borderRadius: '12px',
+            backgroundColor: c.bg,
+            border: `1px solid ${c.border}`,
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '12px'
+        }}>
+            <div style={{
+                width: '10px',
+                height: '10px',
+                borderRadius: '50%',
+                backgroundColor: c.dot,
+                marginTop: '6px',
+                flexShrink: 0
+            }} />
+            <div>
+                <h4 style={{ fontWeight: '700', color: c.text, marginBottom: '4px', fontSize: '15px' }}>{title}</h4>
+                <p style={{ fontSize: '14px', color: '#4b5563', lineHeight: '1.5' }}>{description}</p>
+            </div>
+        </div>
+    );
+}
+
+function ResourceItem({ icon: Icon, title, description, link }) {
+    return (
+        <a
+            href={link || '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '16px',
+                padding: '16px',
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '12px',
+                textDecoration: 'none',
+                transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = '#a6192e';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '#e5e7eb';
+                e.currentTarget.style.boxShadow = 'none';
+            }}
+        >
+            <div style={{ padding: '10px', backgroundColor: '#f3f4f6', borderRadius: '10px' }}>
+                <Icon size={20} color="#6b7280" />
+            </div>
+            <div style={{ flex: 1 }}>
+                <h4 style={{ fontWeight: '700', color: '#111827', marginBottom: '2px' }}>{title}</h4>
+                <p style={{ fontSize: '13px', color: '#6b7280' }}>{description}</p>
+            </div>
+            <ExternalLink size={16} color="#d1d5db" style={{ marginTop: '4px' }} />
+        </a>
+    );
+}
+
+function QuoteCard({ quote, author }) {
+    return (
+        <div style={{
+            background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+            padding: '24px',
+            borderRadius: '16px',
+            border: '1px solid #374151'
+        }}>
+            <p style={{ color: '#f3f4f6', fontStyle: 'italic', lineHeight: '1.6', fontSize: '15px', marginBottom: '12px' }}>
+                "{quote}"
+            </p>
+            <div style={{ fontSize: '13px', color: '#9ca3af', fontWeight: '500' }}>— {author}</div>
         </div>
     );
 }
@@ -119,213 +207,411 @@ export default function CourseSuccessGuide({ course, onBack }) {
             setTimeout(() => {
                 const generated = generateCourseData(course.code);
                 setData(generated);
-            }, 400);
+            }, 300);
         }
     }, [course]);
 
     if (!data) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-center animate-pulse">
-                    <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <BarChart2 size={32} />
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb' }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{
+                        width: '64px', height: '64px',
+                        backgroundColor: 'rgba(166,25,46,0.1)',
+                        borderRadius: '16px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        margin: '0 auto 16px'
+                    }}>
+                        <BookOpen size={32} color="#a6192e" />
                     </div>
+                    <p style={{ color: '#6b7280' }}>Loading success guide...</p>
                 </div>
             </div>
         );
     }
 
+    // Transform data
+    const snapshot = {
+        difficulty: Math.round(parseFloat(data.stats?.difficulty) || 4),
+        timeCommitment: `${Math.round(parseFloat(data.stats?.workload) || 8)}–${Math.round((parseFloat(data.stats?.workload) || 8) + 4)} h/week`,
+        assessmentStyle: 'Assignments + Midterms + Final',
+        mathIntensity: 'Medium–High',
+        programming: course.code?.includes('CMPT') ? 'Python/C++' : 'MATLAB'
+    };
+
+    const syllabi = (data.syllabi || []).map(s => ({
+        term: s.term,
+        prof: s.prof,
+        topics: s.topics || 'Core course concepts and methodologies'
+    }));
+
+    const alumniNotes = (data.notes || []).map(note => ({
+        title: note.title,
+        description: note.description || `Shared by ${note.author || 'Anonymous'} • ${note.date || 'Recently'}`,
+        tags: note.tags || ['Study Notes'],
+        upvotes: note.upvotes || 0
+    }));
+
+    const focusAreas = {
+        green: [
+            { title: "Understanding core algorithm convergence", description: "This is tested heavily on exams and assignments." },
+            { title: "Translating theory into working code", description: "Practice coding exercises from scratch." },
+            { title: "Recognizing exam patterns", description: "Past midterms are your best study resource." }
+        ],
+        yellow: [
+            { title: "Definitions and terminology", description: "Exam wording matters. Know the precise terms." },
+            { title: "Basic proof outlines", description: "Conceptual understanding > full memorization." }
+        ],
+        red: [
+            { title: "Rare edge-case theorems", description: "Don't spend hours on theorems that rarely appear." },
+            { title: "Full derivations", description: "Focus on understanding, not memorizing long proofs." }
+        ]
+    };
+
+    const resources = {
+        videos: [
+            { title: 'Core Concepts Playlist', description: 'Short videos explaining key topics', link: '#' },
+            { title: 'Coding Tutorials', description: 'Step-by-step implementation guides', link: '#' }
+        ],
+        readings: [
+            { title: 'Textbook Key Sections', description: 'Core sections that align with exams', link: '#' },
+            { title: 'Student Study Guide', description: 'Alternative explanations by past students', link: '#' }
+        ],
+        practice: [
+            { title: 'Practice Problems', description: 'Community-created practice with solutions', link: '#' },
+            { title: 'Past Midterms', description: 'When permitted by instructors', link: '#' }
+        ]
+    };
+
+    const studentAdvice = data.reviews?.slice(0, 2).map(r => ({ quote: r.comment, author: r.author })) || [
+        { quote: "Start assignments early — everyone underestimates how much time it takes.", author: "CS Major, 2024" },
+        { quote: "Exams test intuition more than computation.", author: "Math Minor, 2023" }
+    ];
+
     return (
-        <div className="min-h-screen bg-[#f8f9fa] pb-20 animate-fade-in relative">
+        <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', paddingBottom: '80px' }}>
 
             {/* Header */}
-            <div className="bg-white border-b border-gray-200 sticky top-0 z-40 bg-white/90 backdrop-blur-md">
-                <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+            <div style={{
+                backgroundColor: '#a6192e',
+                position: 'sticky',
+                top: 0,
+                zIndex: 40,
+                boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+            }}>
+                <div style={{ maxWidth: '896px', margin: '0 auto', padding: '20px 24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                         <button
                             onClick={onBack}
-                            className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
+                            style={{
+                                width: '48px',
+                                height: '48px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                borderRadius: '12px',
+                                backgroundColor: 'rgba(255,255,255,0.15)',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: 'white',
+                                transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.25)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'}
                         >
-                            <ArrowLeft size={20} />
+                            <ArrowLeft size={24} />
                         </button>
                         <div>
-                            <h1 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
-                                {course.code}
-                                <span className="bg-red-100 text-red-800 text-[10px] px-2 py-0.5 rounded font-bold">ANALYSIS</span>
+                            <h1 style={{ fontSize: '24px', fontWeight: '800', color: 'white', margin: 0 }}>
+                                How to Succeed in {course.code}
                             </h1>
-                            <p className="text-xs text-gray-500 max-w-md line-clamp-1">{course.title}</p>
+                            <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)', margin: '4px 0 0' }}>
+                                Student- and alumni-sourced strategies, notes, and resources
+                            </p>
                         </div>
                     </div>
-
-                    <button className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm font-bold rounded-lg hover:bg-black transition-transform active:scale-95 shadow-lg">
-                        <Download size={16} /> Save Guide
-                    </button>
                 </div>
             </div>
 
-            <div className="max-w-6xl mx-auto px-6 py-8 space-y-10">
+            <div style={{ maxWidth: '896px', margin: '0 auto', padding: '32px 24px' }}>
 
-                {/* 1. VISUALIZERS (AT TOP) */}
-                <section className="bg-white rounded-3xl p-8 border border-gray-200 shadow-xl shadow-gray-200/50">
-                    <h2 className="text-xl font-bold text-gray-900 mb-8 flex items-center gap-2">
-                        <TrendingUp className="text-red-600" /> Vital Statistics
+                {/* Course Snapshot */}
+                <section style={{
+                    backgroundColor: 'white',
+                    borderRadius: '20px',
+                    padding: '28px',
+                    marginBottom: '24px',
+                    border: '1px solid #e5e7eb',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+                }}>
+                    <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#111827', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '20px' }}></span> Course Snapshot
                     </h2>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 items-center">
-
-                        {/* Circular Stats */}
-                        <CircularProgress value={data.stats.difficulty} label="Difficulty" color="text-red-600" subColor="stroke-red-600" />
-                        <CircularProgress value={data.stats.workload} max={10} label="Workload (Hrs)" color="text-orange-600" subColor="stroke-orange-600" />
-                        <CircularProgress value={data.stats.valuable} label="Value" color="text-green-600" subColor="stroke-green-600" />
-
-                        {/* Grade Distribution */}
-                        <div className="w-full h-32 flex flex-col justify-end">
-                            <div className="flex text-xs font-bold text-gray-400 mb-2 justify-between px-1">
-                                <span>DISTRIBUTION</span>
-                                <span className="text-green-600">AVG: B+</span>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(5, 1fr)',
+                        gap: '12px'
+                    }}>
+                        <div style={{
+                            backgroundColor: '#f9fafb',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '12px',
+                            padding: '16px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minHeight: '90px',
+                            textAlign: 'center'
+                        }}>
+                            <div style={{ fontSize: '11px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                                Difficulty
                             </div>
-                            <div className="flex items-end h-full gap-2">
-                                {data.stats.gradeDistribution.map((g, i) => (
-                                    <div key={i} className="flex-1 flex flex-col items-center gap-1 group">
-                                        <div
-                                            className="w-full bg-gray-100 rounded-t-md relative overflow-hidden group-hover:bg-gray-200 transition-all"
-                                            style={{ height: `${g.percent}%` }}
-                                        >
-                                            <div className="absolute inset-x-0 bottom-0 top-[20%] bg-gradient-to-t from-blue-600 to-blue-400 opacity-90 group-hover:opacity-100 transition-opacity"></div>
-                                        </div>
-                                        <span className="text-xs font-bold text-gray-600">{g.grade}</span>
-                                    </div>
-                                ))}
-                            </div>
+                            <DifficultyStars rating={snapshot.difficulty} />
                         </div>
+                        <SnapshotCard label="Time Commitment" value={snapshot.timeCommitment} icon={Clock} />
+                        <SnapshotCard label="Assessment" value={snapshot.assessmentStyle} icon={FileText} />
+                        <SnapshotCard label="Math Intensity" value={snapshot.mathIntensity} icon={AlertTriangle} />
+                        <SnapshotCard label="Programming" value={snapshot.programming} icon={BookOpen} />
                     </div>
                 </section>
 
-                {/* 2. MAIN CONTENT GRID */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Accordions */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-                    {/* Left: Instructors */}
-                    <div className="lg:col-span-1 space-y-6">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                                <Users className="text-gray-400" size={20} /> Instructors
-                            </h3>
-                            <button className="text-xs font-bold text-red-600 hover:underline">View All</button>
+                    {/* Past Syllabi */}
+                    <Accordion title="Past Syllabi & Course Structure" icon={FileText} defaultOpen={true}>
+                        <p style={{ fontSize: '13px', color: '#6b7280', fontStyle: 'italic', marginBottom: '16px' }}>
+                            Syllabi may vary by instructor and term.
+                        </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {syllabi.map((s, i) => (
+                                <div key={i} style={{
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    justifyContent: 'space-between',
+                                    padding: '16px',
+                                    backgroundColor: '#f9fafb',
+                                    borderRadius: '12px',
+                                    border: '1px solid #e5e7eb'
+                                }}>
+                                    <div>
+                                        <div style={{ fontWeight: '700', color: '#111827', fontSize: '16px' }}>{s.term}</div>
+                                        <div style={{ fontSize: '14px', color: '#a6192e', fontWeight: '600', marginTop: '4px' }}>{s.prof}</div>
+                                        <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '6px' }}>Key topics: {s.topics}</div>
+                                    </div>
+                                    <button style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        padding: '8px 16px',
+                                        backgroundColor: 'white',
+                                        border: '1px solid #d1d5db',
+                                        borderRadius: '8px',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        color: '#374151',
+                                        cursor: 'pointer'
+                                    }}>
+                                        <Download size={14} /> View
+                                    </button>
+                                </div>
+                            ))}
                         </div>
+                    </Accordion>
 
-                        <div className="space-y-4">
-                            {data.profs.map(p => <ProfCard key={p.id} prof={p} />)}
-                        </div>
-
-                        {/* Call to Actions */}
-                        <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
-                            <h4 className="font-bold text-blue-900 mb-2">Have you taken this?</h4>
-                            <p className="text-xs text-blue-700 mb-4">Help 3,000+ students by sharing your grade and experience.</p>
-                            <button className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg shadow-md transition-colors">
-                                Add Review
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Right: Accordions */}
-                    <div className="lg:col-span-2">
-                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-6">
-                            <BookOpen className="text-gray-400" size={20} /> Detailed Insights
-                        </h3>
-
-                        {/* Focus */}
-                        <Accordion title="Critical Focus Areas" icon={AlertCircle} defaultOpen>
-                            <div className="grid gap-4">
-                                {data.focus.map((f, i) => (
-                                    <div key={i} className="flex items-start gap-4 p-4 bg-white border border-gray-100 rounded-xl hover:shadow-sm transition-shadow">
-                                        <div className={`mt-1 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${f.importance === 'Critical' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
-                                            !
+                    {/* Alumni Notes */}
+                    <Accordion title="Alumni Notes & Study Guides" icon={BookOpen} defaultOpen={false}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {alumniNotes.map((note, i) => (
+                                <div key={i} style={{
+                                    padding: '16px',
+                                    backgroundColor: 'white',
+                                    border: '1px solid #e5e7eb',
+                                    borderRadius: '12px',
+                                    cursor: 'pointer'
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <h4 style={{ fontWeight: '700', color: '#111827', fontSize: '15px', marginBottom: '6px' }}>{note.title}</h4>
+                                            <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '10px' }}>{note.description}</p>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                {note.tags.map(tag => (
+                                                    <span key={tag} style={{
+                                                        fontSize: '11px',
+                                                        backgroundColor: '#f3f4f6',
+                                                        color: '#4b5563',
+                                                        padding: '4px 10px',
+                                                        borderRadius: '20px',
+                                                        fontWeight: '500'
+                                                    }}>
+                                                        {tag}
+                                                    </span>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 className="font-bold text-gray-900">{f.topic}</h4>
-                                            <p className="text-sm text-gray-600 mt-1 leading-relaxed">{f.tip}</p>
+                                        <div style={{
+                                            fontSize: '14px',
+                                            color: '#10b981',
+                                            fontWeight: '700',
+                                            backgroundColor: '#ecfdf5',
+                                            padding: '6px 12px',
+                                            borderRadius: '20px'
+                                        }}>
+                                            👍 {note.upvotes}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </Accordion>
+                                </div>
+                            ))}
+                        </div>
+                    </Accordion>
 
-                        {/* Syllabi */}
-                        <Accordion title="Syllabi Database" icon={Calendar}>
-                            <div className="grid sm:grid-cols-2 gap-3">
-                                {data.syllabi.map((s, i) => (
-                                    <button key={i} className="flex items-center justify-between p-4 bg-gray-50 hover:bg-white border border-gray-100 hover:border-gray-200 rounded-xl group transition-all text-left">
-                                        <div>
-                                            <div className="font-bold text-gray-900">{s.term}</div>
-                                            <div className="text-xs text-gray-500">{s.prof}</div>
-                                        </div>
-                                        <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm text-gray-400 group-hover:text-red-600 transition-colors">
-                                            <Download size={16} />
-                                        </div>
-                                    </button>
-                                ))}
+                    {/* What Actually Matters */}
+                    <Accordion title="What Actually Matters" icon={CheckCircle} defaultOpen={false}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            <div>
+                                <h4 style={{ fontSize: '13px', fontWeight: '700', color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <CheckCircle size={16} /> Focus heavily on
+                                </h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {focusAreas.green.map((item, i) => (
+                                        <FocusItem key={i} level="green" title={item.title} description={item.description} />
+                                    ))}
+                                </div>
                             </div>
-                        </Accordion>
 
-                        {/* Notes */}
-                        <Accordion title="Community Notes" icon={FileText}>
-                            <div className="space-y-3">
-                                {data.notes.map((n, i) => (
-                                    <button key={i} className="w-full flex items-center justify-between p-4 border border-gray-200 hover:border-red-200 rounded-xl hover:bg-red-50/50 transition-all group text-left">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-gray-100 rounded-lg group-hover:bg-white transition-colors">
-                                                <FileText size={18} className="text-gray-500 group-hover:text-red-600" />
-                                            </div>
-                                            <div>
-                                                <div className="font-bold text-gray-900 text-sm group-hover:text-red-700">{n.title}</div>
-                                                <div className="text-xs text-gray-500">Shared by {n.author} • {n.date}</div>
-                                            </div>
-                                        </div>
-                                        <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full">
-                                            {n.upvotes} ▲
-                                        </span>
-                                    </button>
-                                ))}
+                            <div>
+                                <h4 style={{ fontSize: '13px', fontWeight: '700', color: '#f59e0b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <AlertTriangle size={16} /> Know well
+                                </h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {focusAreas.yellow.map((item, i) => (
+                                        <FocusItem key={i} level="yellow" title={item.title} description={item.description} />
+                                    ))}
+                                </div>
                             </div>
-                            <button className="w-full mt-4 py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 font-bold text-sm hover:border-red-300 hover:text-red-600 transition-colors">
-                                + Upload Your Notes
-                            </button>
-                        </Accordion>
 
-                        {/* Alumni */}
-                        <Accordion title="Alumni Wisdom" icon={MessageSquare}>
-                            <div className="grid gap-4">
-                                {data.reviews.map((r, i) => (
-                                    <div key={i} className="bg-gradient-to-br from-gray-50 to-white p-5 rounded-2xl border border-gray-100">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 bg-gray-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                                                    {r.author.slice(-2)}
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm font-bold text-gray-900">{r.author}</div>
-                                                    <div className="text-[10px] text-gray-400">{r.semester}</div>
-                                                </div>
-                                            </div>
-                                            <div className="text-yellow-500 flex text-xs">
-                                                {'★'.repeat(r.rating)}
-                                            </div>
-                                        </div>
-                                        <p className="text-sm text-gray-700 italic leading-relaxed">"{r.comment}"</p>
-                                    </div>
-                                ))}
+                            <div>
+                                <h4 style={{ fontSize: '13px', fontWeight: '700', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <XCircle size={16} /> Don't overinvest in
+                                </h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {focusAreas.red.map((item, i) => (
+                                        <FocusItem key={i} level="red" title={item.title} description={item.description} />
+                                    ))}
+                                </div>
                             </div>
-                        </Accordion>
+                        </div>
+                    </Accordion>
 
+                    {/* Recommended Resources */}
+                    <Accordion title="Recommended Resources" icon={Link2} defaultOpen={false}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            <div>
+                                <h4 style={{ fontSize: '13px', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Play size={16} color="#ef4444" /> Videos
+                                </h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {resources.videos.map((r, i) => (
+                                        <ResourceItem key={i} icon={Play} title={r.title} description={r.description} link={r.link} />
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4 style={{ fontSize: '13px', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <BookOpen size={16} color="#3b82f6" /> Readings
+                                </h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {resources.readings.map((r, i) => (
+                                        <ResourceItem key={i} icon={BookOpen} title={r.title} description={r.description} link={r.link} />
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4 style={{ fontSize: '13px', fontWeight: '700', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <FileText size={16} color="#8b5cf6" /> Practice
+                                </h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {resources.practice.map((r, i) => (
+                                        <ResourceItem key={i} icon={FileText} title={r.title} description={r.description} link={r.link} />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </Accordion>
+
+                    {/* Student Advice */}
+                    <Accordion title="Advice From Students" icon={MessageSquare} defaultOpen={false}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                            {studentAdvice.map((advice, i) => (
+                                <QuoteCard key={i} quote={advice.quote} author={advice.author} />
+                            ))}
+                        </div>
+                    </Accordion>
+
+                </div>
+
+                {/* Contribution CTA */}
+                <section style={{
+                    marginTop: '32px',
+                    background: 'linear-gradient(135deg, #a6192e 0%, #c42a3d 100%)',
+                    padding: '40px',
+                    borderRadius: '24px',
+                    textAlign: 'center',
+                    boxShadow: '0 10px 40px rgba(166,25,46,0.3)'
+                }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: '700', color: 'white', marginBottom: '12px' }}>
+                        Help Future Students Succeed
+                    </h2>
+                    <p style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '28px', maxWidth: '400px', margin: '0 auto 28px' }}>
+                        Contribute by uploading notes, sharing tips, or recommending resources.
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        <button style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            padding: '12px 24px',
+                            backgroundColor: 'white',
+                            border: 'none',
+                            borderRadius: '12px',
+                            fontWeight: '700',
+                            color: '#a6192e',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                        }}>
+                            <Upload size={18} /> Upload Notes
+                        </button>
+                        <button style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            padding: '12px 24px',
+                            backgroundColor: 'rgba(255,255,255,0.15)',
+                            border: '2px solid rgba(255,255,255,0.3)',
+                            borderRadius: '12px',
+                            fontWeight: '700',
+                            color: 'white',
+                            cursor: 'pointer'
+                        }}>
+                            <MessageSquare size={18} /> Share Tips
+                        </button>
+                        <button style={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            padding: '12px 24px',
+                            backgroundColor: 'rgba(255,255,255,0.15)',
+                            border: '2px solid rgba(255,255,255,0.3)',
+                            borderRadius: '12px',
+                            fontWeight: '700',
+                            color: 'white',
+                            cursor: 'pointer'
+                        }}>
+                            <Link2 size={18} /> Recommend Resource
+                        </button>
                     </div>
-                </div>
+                    <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '24px', fontStyle: 'italic' }}>
+                        Powered by SFU students, for SFU students.
+                    </p>
+                </section>
 
-                {/* Footer Buttons */}
-                <div className="flex justify-center pt-8 border-t border-gray-200">
-                    <button className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-300 hover:border-gray-800 text-gray-700 font-bold rounded-xl transition-all shadow-sm hover:shadow-md">
-                        <ExternalLink size={18} /> View Official Suggestion Page
-                    </button>
-                </div>
             </div>
         </div>
     );
