@@ -22,7 +22,5 @@ From previous experience, planning ahead for our future courses has always prove
 
 **TECHSTACK:**
 - Frontend: React, TailwindCSS, Vite
-- Backend: Node.js, Express.js, MongoDB
-- Database: MongoDB
-- Authentication: Firebase
-- Deployment: Vercel
+- Backend: Node.js,
+- Authentication: Clerk
