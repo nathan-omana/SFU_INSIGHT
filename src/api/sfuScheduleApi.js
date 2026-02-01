@@ -44,6 +44,26 @@ export async function getSectionDetails(year, term, dept, courseNum, section) {
  */
 export function timeToMinutes(timeStr) {
     if (!timeStr) return 0;
+
+    // Matches "12:30pm" or "9:00am" or "14:30" (fallback)
+    // SFU API usually returns 24h format "14:30" but sometimes AM/PM
+    // We'll handle strictly AM/PM if present, otherwise assume 24h as before
+    const match = timeStr.match(/(\d+):(\d+)(am|pm)/i);
+    if (match) {
+        let [_, hours, minutes, modifier] = match;
+        hours = parseInt(hours);
+        minutes = parseInt(minutes);
+
+        if (modifier.toLowerCase() === 'pm' && hours !== 12) {
+            hours += 12;
+        }
+        if (modifier.toLowerCase() === 'am' && hours === 12) {
+            hours = 0;
+        }
+        return hours * 60 + minutes;
+    }
+
+    // Fallback for 24h format (e.g. "14:30") if no am/pm found
     const [hours, mins] = timeStr.split(':').map(Number);
     return hours * 60 + mins;
 }
@@ -52,11 +72,20 @@ export function timeToMinutes(timeStr) {
  * Check if two time slots conflict
  */
 export function checkTimeConflict(slot1, slot2) {
-    if (slot1.day !== slot2.day) return false;
+    if (!slot1.day || !slot2.day) return false;
+
+    // Check for day overlap
+    const days1 = slot1.day.split(',').map(d => d.trim());
+    const days2 = slot2.day.split(',').map(d => d.trim());
+    const hasDayOverlap = days1.some(d => days2.includes(d));
+
+    if (!hasDayOverlap) return false;
+
     const s1Start = timeToMinutes(slot1.startTime);
     const s1End = timeToMinutes(slot1.endTime);
     const s2Start = timeToMinutes(slot2.startTime);
     const s2End = timeToMinutes(slot2.endTime);
+
     return s1Start < s2End && s2Start < s1End;
 }
 
