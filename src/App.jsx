@@ -10,31 +10,14 @@ import { getDepartments, getCourses, startProfessorAggregation } from './api/sfu
 import Scheduler from './components/Scheduler';
 import CourseSuccessGuide from './components/CourseSuccessGuide';
 import SavedCourses from './components/SavedCourses';
+import { CMPT_225_DATA, isCMPT225 } from './data/demoData';
 
 
 // --- MOCK DATA ---
 
 const COURSES = [
-    {
-        id: 'c1',
-        code: 'CMPT 225',
-        title: 'Data Structures and Programming',
-        term: 'Spring 2026',
-        description: 'Data structures include lists, stacks, queues, trees, hash tables, and graphs. Algorithms include searching, sorting, and graph traversal.',
-        metrics: { difficulty: 4.2, workload: 12, fairness: 3.5, clarity: 3.8, n: 142 },
-        assessment: ['Midterm: 20%', 'Final: 50%', 'Labs: 30%'],
-        harderThanPrereqs: 78,
-        tips: [
-            'Start assignments early, the C++ pointers will get you.',
-            'Review recursion depth carefully for the midterm.',
-            'The labs are free marks if you attend.'
-        ],
-        resources: [
-            { id: 'r1', type: 'YouTube', title: 'CMPT 225 Full Lecture Series (2024)', url: '#', votes: 342 },
-            { id: 'r2', type: 'Notes', title: 'Cheatsheet for Final Exam', url: '#', votes: 128 },
-            { id: 'r3', type: 'Practice', title: 'LeetCode List for 225', url: '#', votes: 89 },
-        ]
-    },
+    // Use demo data for CMPT 225
+    CMPT_225_DATA.course,
     {
         id: 'c_arch131',
         code: 'ARCH 131',

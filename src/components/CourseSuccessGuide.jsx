@@ -6,6 +6,8 @@ import {
     AlertTriangle, XCircle
 } from 'lucide-react';
 import { generateCourseData } from '../utils/mockDataGenerator';
+import { CMPT_225_DATA, isCMPT225 } from '../data/demoData';
+import StudyGuidePreview from './StudyGuidePreview';
 
 // --- SUB-COMPONENTS --- //
 
@@ -201,13 +203,22 @@ function QuoteCard({ quote, author }) {
 
 export default function CourseSuccessGuide({ course, onBack }) {
     const [data, setData] = useState(null);
+    const [isDemoMode, setIsDemoMode] = useState(false);
+    const [selectedNote, setSelectedNote] = useState(null);
 
     useEffect(() => {
         if (course) {
-            setTimeout(() => {
-                const generated = generateCourseData(course.code);
-                setData(generated);
-            }, 300);
+            // Check if this is CMPT 225 - use demo data
+            if (isCMPT225(course.code)) {
+                setData(CMPT_225_DATA.successGuide);
+                setIsDemoMode(true);
+            } else {
+                setTimeout(() => {
+                    const generated = generateCourseData(course.code);
+                    setData(generated);
+                    setIsDemoMode(false);
+                }, 300);
+            }
         }
     }, [course]);
 
@@ -230,8 +241,8 @@ export default function CourseSuccessGuide({ course, onBack }) {
         );
     }
 
-    // Transform data
-    const snapshot = {
+    // Transform data - use demo data directly if available
+    const snapshot = isDemoMode ? data.snapshot : {
         difficulty: Math.round(parseFloat(data.stats?.difficulty) || 4),
         timeCommitment: `${Math.round(parseFloat(data.stats?.workload) || 8)}–${Math.round((parseFloat(data.stats?.workload) || 8) + 4)} h/week`,
         assessmentStyle: 'Assignments + Midterms + Final',
@@ -239,20 +250,20 @@ export default function CourseSuccessGuide({ course, onBack }) {
         programming: course.code?.includes('CMPT') ? 'Python/C++' : 'MATLAB'
     };
 
-    const syllabi = (data.syllabi || []).map(s => ({
+    const syllabi = isDemoMode ? data.syllabi : (data.syllabi || []).map(s => ({
         term: s.term,
         prof: s.prof,
         topics: s.topics || 'Core course concepts and methodologies'
     }));
 
-    const alumniNotes = (data.notes || []).map(note => ({
+    const alumniNotes = isDemoMode ? data.alumniNotes : (data.notes || []).map(note => ({
         title: note.title,
         description: note.description || `Shared by ${note.author || 'Anonymous'} • ${note.date || 'Recently'}`,
         tags: note.tags || ['Study Notes'],
         upvotes: note.upvotes || 0
     }));
 
-    const focusAreas = {
+    const focusAreas = isDemoMode ? data.focusAreas : {
         green: [
             { title: "Understanding core algorithm convergence", description: "This is tested heavily on exams and assignments." },
             { title: "Translating theory into working code", description: "Practice coding exercises from scratch." },
@@ -268,7 +279,7 @@ export default function CourseSuccessGuide({ course, onBack }) {
         ]
     };
 
-    const resources = {
+    const resources = isDemoMode ? data.resources : {
         videos: [
             { title: 'Core Concepts Playlist', description: 'Short videos explaining key topics', link: '#' },
             { title: 'Coding Tutorials', description: 'Step-by-step implementation guides', link: '#' }
@@ -283,10 +294,10 @@ export default function CourseSuccessGuide({ course, onBack }) {
         ]
     };
 
-    const studentAdvice = data.reviews?.slice(0, 2).map(r => ({ quote: r.comment, author: r.author })) || [
+    const studentAdvice = isDemoMode ? data.studentAdvice : (data.reviews?.slice(0, 2).map(r => ({ quote: r.comment, author: r.author })) || [
         { quote: "Start assignments early — everyone underestimates how much time it takes.", author: "CS Major, 2024" },
         { quote: "Exams test intuition more than computation.", author: "Math Minor, 2023" }
-    ];
+    ]);
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#f3f4f6', paddingBottom: '80px' }}>
@@ -424,13 +435,26 @@ export default function CourseSuccessGuide({ course, onBack }) {
                     <Accordion title="Alumni Notes & Study Guides" icon={BookOpen} defaultOpen={false}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             {alumniNotes.map((note, i) => (
-                                <div key={i} style={{
-                                    padding: '16px',
-                                    backgroundColor: 'white',
-                                    border: '1px solid #e5e7eb',
-                                    borderRadius: '12px',
-                                    cursor: 'pointer'
-                                }}>
+                                <div
+                                    key={i}
+                                    style={{
+                                        padding: '16px',
+                                        backgroundColor: 'white',
+                                        border: '1px solid #e5e7eb',
+                                        borderRadius: '12px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onClick={() => setSelectedNote(note)}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = '#a6192e';
+                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(166,25,46,0.15)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = '#e5e7eb';
+                                        e.currentTarget.style.boxShadow = 'none';
+                                    }}
+                                >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                         <div style={{ flex: 1 }}>
                                             <h4 style={{ fontWeight: '700', color: '#111827', fontSize: '15px', marginBottom: '6px' }}>{note.title}</h4>
@@ -613,6 +637,14 @@ export default function CourseSuccessGuide({ course, onBack }) {
                 </section>
 
             </div>
+
+            {/* Study Guide Preview Modal */}
+            {selectedNote && (
+                <StudyGuidePreview
+                    note={selectedNote}
+                    onClose={() => setSelectedNote(null)}
+                />
+            )}
         </div>
     );
 }
