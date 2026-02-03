@@ -777,10 +777,11 @@ function App() {
     };
 
     return (
+        
         <div className="min-h-screen pb-20">
 
             {/* Header */}
-            <header style={{ position: 'sticky', top: 0, zIndex: 40, backgroundColor: '#5c0a1f', borderBottom: '2px solid #3d0614', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+            <header style={{ position: 'sticky', top: 0, zIndex: 40, backgroundColor: '#cc0733', borderBottom: '2px solid #cc0733', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
                 <div className="w-full px-8 h-24 flex items-center justify-between">
                     <div
                         className="flex items-center gap-4 cursor-pointer"
@@ -797,21 +798,22 @@ function App() {
                         >SFU Insight</span>
                     </div>
 
-                    <nav style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    {/* Push buttons to the left*/}
+                    <nav style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginRight: '1rem' }}>
                         <a href="#" onClick={(e) => { e.preventDefault(); setCurrentView(currentView === 'scheduler' ? 'home' : 'scheduler'); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.125rem', fontWeight: '600', color: 'white', padding: '0.75rem 1.25rem', borderRadius: '8px', transition: 'all 0.2s', backgroundColor: currentView === 'scheduler' ? 'rgba(255,255,255,0.2)' : 'transparent' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = currentView === 'scheduler' ? 'rgba(255,255,255,0.2)' : 'transparent'}>
                             <BarChart2 size={22} />
-                            <span>Schedule</span>
+                            <span style={{ marginRight: '0.5rem' }}>Schedule</span>
                         </a>
                         <a href="#" onClick={(e) => { e.preventDefault(); setCurrentView('saved'); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.125rem', fontWeight: '600', color: 'white', padding: '0.75rem 1.25rem', borderRadius: '8px', transition: 'all 0.2s', backgroundColor: currentView === 'saved' ? 'rgba(255,255,255,0.2)' : 'transparent' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = currentView === 'saved' ? 'rgba(255,255,255,0.2)' : 'transparent'}>
                             <Bookmark size={22} />
-                            <span>Saved</span>
+                            <span style={{ marginRight: '0.5rem' }}>Saved</span>
                         </a>
 
                         <SignedOut>
                             <SignInButton mode="modal">
                                 <button style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.125rem', fontWeight: '600', color: 'white', padding: '0.75rem 1.25rem', borderRadius: '8px', transition: 'all 0.2s', cursor: 'pointer' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                                     <User size={22} />
-                                    <span>Login</span>
+                                    <span style={{ marginRight: '1rem' }}>Login</span>
                                 </button>
                             </SignInButton>
                         </SignedOut>
