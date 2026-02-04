@@ -1,5 +1,5 @@
 // API client for course reviews
-const API_BASE = 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export async function getReviewStats(courseCode) {
     const res = await fetch(`${API_BASE}/api/courses/${encodeURIComponent(courseCode)}/stats`);

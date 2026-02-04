@@ -529,7 +529,7 @@ export default function Scheduler() {
                     }}
                 >
                     <ExternalLink size={16} />
-                    Open SFU GO
+                    Open MySchedule
                 </a>
 
                 {/* Department Select */}

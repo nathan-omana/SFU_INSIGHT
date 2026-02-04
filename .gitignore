@@ -116,3 +116,4 @@ out
 # Vite
 dist
 bs
+.DS_STORE

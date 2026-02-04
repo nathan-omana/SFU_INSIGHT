@@ -1,7 +1,7 @@
 //This file is used to fetch data from the SFU Courses API using the sfuCoursesApi.js file
 
 // Base URL for the SFU Courses API
-const API_BASE_URL = 'https://api.sfucourses.com/v1/rest';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 /**
  * Fetch all course reviews summary

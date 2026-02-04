@@ -12,7 +12,7 @@ const getTeacher = rmp.default?.getTeacher || rmp.getTeacher;
 dotenv.config();
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 5000 || 3001;
 
 // Initialize Clerk Client
 const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
@@ -693,6 +693,7 @@ app.delete('/api/schedules/:term', requireAuth, async (req, res) => {
     }
 });
 
-app.listen(PORT, '127.0.0.1', () => {
-    console.log(`Proxy server running on http://127.0.0.1:${PORT}`);
+// Remove '127.0.0.1' so it can listen to external requests
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is live on port ${PORT}`);
 });

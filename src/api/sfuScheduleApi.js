@@ -1,7 +1,7 @@
 // SFU Course Outlines API for Schedule Data
 // API Documentation: http://www.sfu.ca/bin/wcm/course-outlines
 
-const SFU_API_BASE = 'http://www.sfu.ca/bin/wcm/course-outlines';
+const SFU_API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 /**
  * Get departments for a given term

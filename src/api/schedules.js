@@ -1,5 +1,5 @@
 // API client for saved schedules
-const API_BASE = 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export async function getSchedule(term, token) {
     const response = await fetch(`${API_BASE}/api/schedules?term=${encodeURIComponent(term)}`, {
